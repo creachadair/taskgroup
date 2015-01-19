@@ -88,6 +88,13 @@ func (g *Group) Wait() error {
 	return g.err
 }
 
+// WaitThen acts as Wait, then executes f (unconditionally) before returning
+// the resulting error value.
+func (g *Group) WaitThen(f func()) error {
+	defer f()
+	return g.Wait()
+}
+
 // Cancel cancels the goroutines in the group.  This method does not block;
 // call Wait if you want to know when the effect is complete.
 func (g *Group) Cancel() { g.cancel() }
