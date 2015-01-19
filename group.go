@@ -7,6 +7,18 @@ import (
 	"golang.org/x/net/context"
 )
 
+// A Task is a function that performs some arbitrary task and returns an error
+// value, and is the basic unit of work in a Group.  A Task that requires other
+// state can be expressed as a method, for example:
+//
+//   type myTask struct{
+//      // ... various fields
+//   }
+//   func (t *myTask) Do(ctx context.Context) error { ... }
+//
+// The caller can use t.Do as an argument to the Go method of a Group.
+type Task func(context.Context) error
+
 // A Group represents a collection of cooperating goroutines that share a
 // context.Context.  New tasks can be added to the group via the Go method.
 //
@@ -49,7 +61,7 @@ func New(ctx context.Context) *Group {
 
 // Go adds a new task to the group.  If the group context has been cancelled,
 // this function returns an error.
-func (g *Group) Go(f func(context.Context) error) error {
+func (g *Group) Go(task Task) error {
 	select {
 	case <-g.ctx.Done():
 		return g.ctx.Err()
@@ -57,7 +69,7 @@ func (g *Group) Go(f func(context.Context) error) error {
 		g.wg.Add(1)
 		go func() {
 			defer g.wg.Done()
-			if err := f(g.ctx); err != nil {
+			if err := task(g.ctx); err != nil {
 				g.errc <- err
 			}
 		}()
