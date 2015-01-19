@@ -159,3 +159,14 @@ func Single(ctx context.Context, task Task) *Group {
 	}
 	return g
 }
+
+// CheckDone returns ctx.Err() if ctx has been cancelled or reached its
+// deadline, otherwise it returns nil.  This function does not block.
+func CheckDone(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}
