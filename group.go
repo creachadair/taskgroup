@@ -48,10 +48,11 @@ type Interface interface {
 type Group struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	err    error
-	errc   chan<- error
-	edone  chan struct{}
-	wg     sync.WaitGroup
+	err    error          // final result
+	errc   chan<- error   // input to error collector
+	edone  chan struct{}  // completion signal from error collector
+	wait   sync.Once      // triggers shutdown in Wait
+	wg     sync.WaitGroup // active goroutines
 }
 
 // New constructs a new, empty group based on the specified context.
@@ -79,11 +80,12 @@ func New(ctx context.Context) *Group {
 // Go adds a new task to the group.  If the group context has been cancelled,
 // this function returns an error.
 func (g *Group) Go(task Task) error {
+	g.wg.Add(1)
 	select {
-	case <-g.ctx.Done():
+	case <-g.ctx.Done(): // context is cancelled; no more tasks
+		g.wg.Done()
 		return g.ctx.Err()
 	default:
-		g.wg.Add(1)
 		go func() {
 			defer g.wg.Done()
 			if err := task(g.ctx); err != nil {
@@ -94,14 +96,27 @@ func (g *Group) Go(task Task) error {
 	return nil
 }
 
-// Wait blocks until all the goroutines in the group are finished executing (or
-// have been cancelled). Wait returns nil if all tasks completed successfully;
-// otherwise it returns the first non-nil error returned by a task (or caused
-// by a cancellation).
+// Wait blocks until all the goroutines currently in the group are finished
+// executing (or have been cancelled). Wait returns nil if all tasks completed
+// successfully; otherwise it returns the first non-nil error returned by a
+// task (or caused by a cancellation).
+//
+// After Wait has been called, no further goroutines may enter the group.
 func (g *Group) Wait() error {
-	g.wg.Wait()
-	close(g.errc)
-	<-g.edone
+	g.wait.Do(func() {
+		g.wg.Wait() // wait for all active goroutines to finish
+		g.cancel()  // no more goroutines may enter
+
+		// At this point, additional goroutines may have entered the group
+		// after we finished waiting, but before we finished cancelling.  We
+		// need to wait for the stragglers to notice the cancellation and exit.
+		// Usually this will be a (near) no-op.  Any task that reaches Go now
+		// will be turned away because we cancelled.
+		g.wg.Wait()
+
+		close(g.errc) // signal the error collector to stop
+	})
+	<-g.edone // wait for the error collector to finish
 	return g.err
 }
 
