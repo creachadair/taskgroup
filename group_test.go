@@ -111,7 +111,7 @@ func TestSingle(t *testing.T) {
 			return nil
 		})
 	}
-	if err := g.WaitThen(func() { close(ch) }); err != nil {
+	if err := WaitThen(g, func() { close(ch) }); err != nil {
 		t.Errorf("Wait for writers: unexpected error: %v", err)
 	}
 

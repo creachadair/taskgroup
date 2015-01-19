@@ -120,16 +120,16 @@ func (g *Group) Wait() error {
 	return g.err
 }
 
-// WaitThen acts as Wait, then executes f (unconditionally) before returning
-// the resulting error value.
-func (g *Group) WaitThen(f func()) error {
-	defer f()
-	return g.Wait()
-}
-
 // Cancel cancels the goroutines in the group.  This method does not block;
 // call Wait if you want to know when the effect is complete.
 func (g *Group) Cancel() { g.cancel() }
+
+// WaitThen acts as g.Wait, and executes then (unconditionally) before
+// returning the resulting error value.
+func WaitThen(g Interface, then func()) error {
+	defer then()
+	return g.Wait()
+}
 
 // Single returns a new group containing a single task.  A typical use for this is
 // to manage a worker that updates a data structure from a channel, and to know when
@@ -147,9 +147,8 @@ func (g *Group) Cancel() { g.cancel() }
 //    g := group.New(ctx)
 //    addTasksTo(g)
 //    ...
-//    err := g.Wait()  // all the tasks are done
-//    close(ch)        // signal the collector
-//    collect.Wait()   // ... and wait for it to complete
+//    err := group.WaitThen(g, func() { close(ch) }) // all the tasks are done
+//    collect.Wait() // wait for the collector to complete
 //
 func Single(ctx context.Context, task Task) *Group {
 	g := New(ctx)
