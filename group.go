@@ -26,9 +26,11 @@ type Interface interface {
 	Go(Task) error
 
 	// Wait blocks until all the tasks in the group are complete, and returns
-	// the error value from the first failed task (if any) or nil.  It is safe
-	// to invoke Wait concurrently from multiple goroutines, and the result is
-	// idempotent.
+	// the error value from the first failed task (if any) or nil.
+	//
+	// It is safe to invoke Wait concurrently from multiple goroutines, and the
+	// result is idempotent.  After Wait has completed at least once, the group
+	// will reject any additional tasks.
 	Wait() error
 
 	// Cancel signals the tasks in the group to stop their work by cancelling

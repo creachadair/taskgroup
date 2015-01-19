@@ -123,3 +123,33 @@ func TestSingle(t *testing.T) {
 		t.Errorf("Value count: got %d, want %d", n, numValues)
 	}
 }
+
+func TestMultipleWaiters(t *testing.T) {
+	g := New(context.Background()) // Tasks doing nonsense work
+	w := New(context.Background()) // Tasks waiting for the outcome of g
+	want := errors.New("a failure of imagination")
+
+	var cancellations int32
+	for i := 0; i < numTasks; i++ {
+		i := i
+		g.Go(func(ctx context.Context) error {
+			if err := CheckDone(ctx); err != nil {
+				atomic.AddInt32(&cancellations, 1)
+				return err
+			}
+			randwait(500)
+			if i == 1 {
+				return want
+			}
+			return nil
+		})
+	}
+
+	for i := 0; i < numTasks; i++ {
+		w.Go(func(_ context.Context) error { return g.Wait() })
+	}
+	if got := w.Wait(); got != want {
+		t.Errorf("Incorrect error from waiters: got %v, want %v", got, want)
+	}
+	t.Logf("[FYI] Saw %d cancellations", cancellations)
+}
