@@ -19,6 +19,23 @@ import (
 // The caller can use t.Do as an argument to the Go method of a Group.
 type Task func(context.Context) error
 
+// Interface is the interface satisfied by a Group.  It is defined as an
+// interface to allow composition of groups with throttlers.
+type Interface interface {
+	// Go adds a task to the group, returning an error if that is impossible.
+	Go(Task) error
+
+	// Wait blocks until all the tasks in the group are complete, and returns
+	// the error value from the first failed task (if any) or nil.  It is safe
+	// to invoke Wait concurrently from multiple goroutines, and the result is
+	// idempotent.
+	Wait() error
+
+	// Cancel signals the tasks in the group to stop their work by cancelling
+	// their context.  It does not block.
+	Cancel()
+}
+
 // A Group represents a collection of cooperating goroutines that share a
 // context.Context.  New tasks can be added to the group via the Go method.
 //

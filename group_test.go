@@ -3,7 +3,6 @@ package group
 import (
 	"errors"
 	"math/rand"
-	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,12 +11,6 @@ import (
 )
 
 const numTasks = 64
-
-func init() {
-	if n := runtime.NumCPU(); n > 1 {
-		runtime.GOMAXPROCS(n / 2)
-	}
-}
 
 // randwait sleeps for a random time of up to n milliseconds.
 func randwait(n int) <-chan time.Time {
