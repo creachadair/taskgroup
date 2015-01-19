@@ -3,6 +3,7 @@ package group
 import (
 	"errors"
 	"math/rand"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,6 +13,13 @@ import (
 
 const numTasks = 64
 
+func init() {
+	if n := runtime.NumCPU(); n > 1 {
+		runtime.GOMAXPROCS(n / 2)
+	}
+}
+
+// randwait sleeps for a random time of up to n milliseconds.
 func randwait(n int) <-chan time.Time {
 	return time.After(time.Duration(rand.Intn(n)) * time.Millisecond)
 }
@@ -84,5 +92,41 @@ func TestErrors(t *testing.T) {
 	}
 	if cancelled != numTasks-1 {
 		t.Errorf("Cancelled: got %d, want %d", cancelled, numTasks-1)
+	}
+}
+
+func TestSingle(t *testing.T) {
+	ctx := context.Background()
+
+	// A single task that accumulates values from ch.
+	ch := make(chan int)
+	var n, sum int
+	task := Single(ctx, func(_ context.Context) error {
+		for v := range ch {
+			n++
+			sum += v
+		}
+		return nil
+	})
+
+	// A bunch of tasks that send work to ch.
+	const numValues = 1357
+	g := New(ctx)
+	for i := 0; i < numValues; i++ {
+		g.Go(func(_ context.Context) error {
+			ch <- rand.Intn(100) - 40
+			return nil
+		})
+	}
+	if err := g.WaitThen(func() { close(ch) }); err != nil {
+		t.Errorf("Wait for writers: unexpected error: %v", err)
+	}
+
+	if err := task.Wait(); err != nil {
+		t.Errorf("Wait for reader: unexpected error: %v", err)
+	}
+	t.Logf("Results: n=%d, sum=%d", n, sum)
+	if n != numValues {
+		t.Errorf("Value count: got %d, want %d", n, numValues)
 	}
 }

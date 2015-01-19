@@ -98,3 +98,31 @@ func (g *Group) WaitThen(f func()) error {
 // Cancel cancels the goroutines in the group.  This method does not block;
 // call Wait if you want to know when the effect is complete.
 func (g *Group) Cancel() { g.cancel() }
+
+// Single returns a new group containing a single task.  A typical use for this is
+// to manage a worker that updates a data structure from a channel, and to know when
+// it has completed.
+//
+// Example:
+//    var results []result
+//    ch := make(chan result)
+//    collect := group.Single(ctx, func(ctx context.Context) error {
+//       for r := range ch {
+//         results = append(results, r)
+//       }
+//       return nil
+//    })
+//    g := group.New(ctx)
+//    addTasksTo(g)
+//    ...
+//    err := g.Wait()  // all the tasks are done
+//    close(ch)        // signal the collector
+//    collect.Wait()   // ... and wait for it to complete
+//
+func Single(ctx context.Context, task Task) *Group {
+	g := New(ctx)
+	if err := g.Go(task); err != nil {
+		panic(err) // should not be a possible condition
+	}
+	return g
+}
