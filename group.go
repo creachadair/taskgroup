@@ -1,4 +1,14 @@
 // Package group manages a collection of cancellable goroutines.
+//
+// Basic usage example:
+//   g := group.New(context.Background())
+//   g.Go(func(ctx context.Context) error {
+//     ...
+//   })
+//   if err := g.Wait(); err != nil {
+//     log.Fatal(err)
+//   }
+//
 package group
 
 import (
@@ -41,8 +51,9 @@ type Interface interface {
 // A Group represents a collection of cooperating goroutines that share a
 // context.Context.  New tasks can be added to the group via the Go method.
 //
-// If any task in the group returns an error, the context associated with the
-// group is cancelled.  Tasks should check the done channel of the context as
+// By default, if any task in the group returns an error, the context
+// associated with the group is cancelled; this can be overridden with the
+// OnError option.  Tasks should check the done channel of the context as
 // appropriate to detect such a cancellation.
 //
 // The caller may explicitly cancel the goroutines using the Cancel method.
@@ -168,8 +179,7 @@ func WaitThen(g Interface, then func()) error {
 //       return nil
 //    })
 //    g := group.New(ctx)
-//    addTasksTo(g)
-//    ...
+//    // ... add tasks to g as desired ...
 //    err := group.WaitThen(g, func() { close(ch) }) // all the tasks are done
 //    collect.Wait() // wait for the collector to complete
 //
