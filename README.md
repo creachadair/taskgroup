@@ -112,6 +112,8 @@ If the caller wants to cancel the group explicitly, simply invoke:
 
 	g.Cancel()
 
+A working program demonstrating this example can be found in the `cmd/copytree` subdirectory.
+
 ## Controlling Concurrency: Capacity and Rate
 
 Although goroutines are inexpensive to start up, it is often useful to limit the number of _active_ goroutines in a program, to avoid various kinds of resource exhaustion (CPU, memory, in-flight RPCs, etc.).  Doing so often requires a bunch of additional plumbing to restrict when goroutines may be started or become active.
