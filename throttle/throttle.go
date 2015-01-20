@@ -1,16 +1,16 @@
 // Package throttle defines rate and concurrency controllers for groups.  A
 // throttler delegates tasks to an underlying group under certain conditions.
 //
-// This package defines the following types:
+// This package defines the following Functions:
 //
-// A RateLimit ensures that tasks enter the group no faster than a predefined
-// number per unit time.
+// Rate returns a wrapper that ensures that tasks enter the group no faster
+// than a predefined number per unit time.
 //
-// A Capacity restricts the number of active goroutines in the group to be no
-// more than a given limit.
+// Capacity returns a wrapper that restricts the number of active goroutines in
+// the group to be no more than a given limit.
 //
-// Each of these types satisfies group.Interface, allowing them to be composed
-// in various ways (e.g., you can combine a RateLimit and a Capacity).
+// Each of thes implementations satisfies group.Interface, allowing them to be
+// composed (i.e., you can combine Rate and Capacity).
 package throttle
 
 import (
