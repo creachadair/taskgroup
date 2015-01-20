@@ -1,6 +1,6 @@
 # group
 
-A `*group.Group` represents a group of goroutines working on related tasks, sharing a `context.Context`. As long as the group has not been cancelled or failed, new tasks can be added at will. The caller can explicitly cancel the work in progress, or wait for all the goroutines to complete. It is not intended to replace the full generality of Go's built-in features, but it simplifies some of the plumbing for common concurrent tasks.
+A `*group.Group` represents a group of goroutines working on related tasks, sharing a `context.Context`. As long as the group has not failed or been cancelled, new tasks can be added at will. The caller can explicitly cancel the work in progress, or wait for all the goroutines to complete. It is not intended to replace the full generality of Go's built-in features, but it simplifies some of the plumbing for common concurrent tasks.
 
 If any task in the group returns an error, the context associated with the group is cancelled (by default). Tasks should check the done channel of the context as appropriate to detect such a cancellation.
 
