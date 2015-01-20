@@ -9,7 +9,7 @@
 // Capacity returns a wrapper that restricts the number of active goroutines in
 // the group to be no more than a given limit.
 //
-// Each of thes implementations satisfies group.Interface, allowing them to be
+// Each of these implementations satisfies group.Interface, allowing them to be
 // composed (i.e., you can combine Rate and Capacity).
 package throttle
 
