@@ -156,17 +156,34 @@ func TestMultipleWaiters(t *testing.T) {
 
 func TestOnError(t *testing.T) {
 	want := errors.New("that's just, like, your opinion, man")
-	var called bool
-	g := New(context.Background(), OnError(func(e error) {
+	var allErrors []error
+	g := New(context.Background())
+	OnError(func(e error) {
 		t.Logf("Callback received error: %v", e)
-		called = true
-	}))
+		g.Cancel()
+		allErrors = append(allErrors, e)
+	})(g)
+
+	// This goroutine returns an error, triggering the callback to cancel.
 	g.Go(func(_ context.Context) error { return want })
+
+	// This goroutine blocks until the group is cancelled.
+	g.Go(func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	})
+
+	// The triggering error should be the original one, but we should also get
+	// the cancellation.
 	if err := g.Wait(); err != want {
 		t.Errorf("Wrong error returned: got %v, want %v", err, want)
 	}
-	if !called {
+	if len(allErrors) == 0 {
 		t.Error("The OnError callback was not invoked")
+	} else {
+		t.Logf("All errors: %q", allErrors)
 	}
 }
 

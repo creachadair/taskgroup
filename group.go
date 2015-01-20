@@ -61,7 +61,7 @@ type Interface interface {
 type Group struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
-	onError func(error)    // called the first time a task returns non-nil
+	onError func(error)    // called each time a task returns non-nil
 	err     error          // final result
 	errc    chan<- error   // input to error collector
 	edone   chan struct{}  // completion signal from error collector
@@ -86,8 +86,10 @@ func New(ctx context.Context, opts ...Option) *Group {
 	go func() {
 		defer close(g.edone)
 		for e := range errc {
-			if e != nil && g.err == nil {
-				g.err = e
+			if e != nil {
+				if g.err == nil {
+					g.err = e
+				}
 				g.onError(e)
 			}
 		}
@@ -145,9 +147,9 @@ func (g *Group) Cancel() { g.cancel() }
 // An Option is a setting that controls the behaviour of a *Group.
 type Option func(*Group)
 
-// OnError returns an Option that provides a function to be invoked the first
-// time a task in the group returns a non-nil error.  The error value from the
-// task is passed to f.
+// OnError returns an Option that provides a function to be invoked each time a
+// task in the group returns a non-nil error.  The error value from the task is
+// passed to f.
 //
 // By default, the group will cancel itself on the first error value; setting
 // OnError(nil) will disable this behaviour.
