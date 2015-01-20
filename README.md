@@ -1,12 +1,12 @@
 # group
 
-A `*group.Group` represents a group of goroutines working on related tasks, that share a `context.Context`. As long as the group has not been cancelled or failed, new tasks can be added at will. The caller can explicitly cancel the work in progress, or wait for all the goroutines to complete. This simplifies some of the plumbing for a common concurrency pattern.
+A `*group.Group` represents a group of goroutines working on related tasks, sharing a `context.Context`. As long as the group has not been cancelled or failed, new tasks can be added at will. The caller can explicitly cancel the work in progress, or wait for all the goroutines to complete. It is not intended to replace the full generality of Go's built-in features, but it simplifies some of the plumbing for common concurrent tasks.
 
 If any task in the group returns an error, the context associated with the group is cancelled (by default). Tasks should check the done channel of the context as appropriate to detect such a cancellation.
 
 ## Rationale
 
-Go provides excellent and powerful concurrency primitives, in the form of goroutines, channels, select, and the standard library's `sync` package. In some common situations, however, managing goroutine lifetimes can become unwieldy using only the built-in primitives and library functions.
+Go provides excellent and powerful concurrency primitives, in the form of goroutines, channels, select, and the standard library's `sync` package. In some common situations, however, managing goroutine lifetimes can become unwieldy using only what is built in.
 
 For example, consider the case of copying a large directory tree: Walk throught the source directory recursively, creating the parallel target directory structure and spining up a goroutine to copy each of the files concurrently. This part is simple:
 
@@ -23,8 +23,8 @@ For example, consider the case of copying a large directory tree: Walk throught 
 		})
 		if err != nil {
 			// ... clean up the output directory ...
-			log.Fatalf("Copy failed: %v", err)
 		}
+		return err
 	}
 
 But of course, it's not quite as easy as that, because how will you know when all the file copies are finished? That's easy: Use a `sync.WaitGroup`:
