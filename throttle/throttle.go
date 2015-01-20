@@ -26,9 +26,8 @@ type rateLimit struct {
 	adm *time.Ticker // current admission ticker
 }
 
-// RateLimit constructs a group that admits at most one new task to g per
-// interval.
-func RateLimit(g group.Interface, interval time.Duration) group.Interface {
+// Rate constructs a group that admits at most one new task to g per interval.
+func Rate(g group.Interface, interval time.Duration) group.Interface {
 	return &rateLimit{
 		Interface: g,
 		adm:       time.NewTicker(interval),

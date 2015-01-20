@@ -29,11 +29,11 @@ func (t *timer) Go(task group.Task) error {
 	return nil
 }
 
-func TestRateLimit(t *testing.T) {
+func TestRateLimiter(t *testing.T) {
 	const numTasks = 765
 	const interval = 1 * time.Millisecond
 	g := &timer{
-		Interface: RateLimit(group.New(context.Background()), interval),
+		Interface: Rate(group.New(context.Background()), interval),
 	}
 	for i := 0; i < numTasks; i++ {
 		g.Go(func(_ context.Context) error { time.Sleep(2 * interval); return nil })
