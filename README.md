@@ -6,7 +6,7 @@ If any task in the group returns an error, the context associated with the group
 
 ## Rationale
 
-Go provides excellent and powerful concurrency primitives, in the form of goroutines, channels, select, and the standard library's `sync` package. In some common situations, however, managing goroutine lifetimes can become unwieldy using only what is built in.
+Go provides excellent and powerful concurrency primitives, in the form of [goroutines](http://golang.org/ref/spec#Go_statements), [channels](http://golang.org/ref/spec#Channel_types), [select](http://golang.org/ref/spec#Select_statements), and the standard library's [sync](http://godoc.org/sync) package. In some common situations, however, managing goroutine lifetimes can become unwieldy using only what is built in.
 
 For example, consider the case of copying a large directory tree: Walk throught the source directory recursively, creating the parallel target directory structure and spining up a goroutine to copy each of the files concurrently. This part is simple:
 
