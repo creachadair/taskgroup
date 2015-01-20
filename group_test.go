@@ -169,3 +169,31 @@ func TestOnError(t *testing.T) {
 		t.Error("The OnError callback was not invoked")
 	}
 }
+
+func TestAutoCancellation(t *testing.T) {
+	// Verify the default behaviour that when one of the goroutines in a group
+	// fails, the others are cancelled.
+	g := New(context.Background())
+
+	// This little goroutine sleeps until cancelled, then sets cancelled=true.
+	// If the cancellation doesn't occur, we'll get a deadlock (all goroutines
+	// asleep) and the test will fail.
+	var cancelled bool
+	g.Go(func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			cancelled = true
+			return ctx.Err()
+		}
+	})
+
+	// This little goroutine returns an error.
+	g.Go(func(_ context.Context) error { return errors.New("you lose") })
+
+	if err := g.Wait(); err == nil {
+		t.Error("Wait should have returned an error, but did not")
+	}
+	if !cancelled {
+		t.Error("The sleeper was not cancelled")
+	}
+}
