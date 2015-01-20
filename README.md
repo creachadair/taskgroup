@@ -36,7 +36,7 @@ But of course, it's not quite as easy as that, because how will you know when al
 	...
 	wg.Wait()
 
-Okay. Remember, though that copies might fail -- the disk might fill up, or there might be a permissions error, say. If you don't care, you might just log the error and continue, but often in case of error you'd like to back out and clean up your mess. But there's no way to return an error from the goroutine; you will have to pass it back over a channel, which means you now have to thread a channel in through the functions you invoke from the goroutine:
+Okay. Remember, though that copies might fail -- the disk might fill up, or there might be a permissions error, say. If you don't care, you might just log the error and continue, but often in case of error you'd like to back out and clean up your mess. But there's no way to capture the return value from the function inside the goroutine; you will have to pass it back over a channel, which means you now have to thread a channel in through the functions you invoke from the goroutine:
 
     errs := make(chan error)
     ...
