@@ -14,10 +14,7 @@ For example, consider the case of copying a large directory tree: Walk throught 
 		err := filepath.Walk(source, func(path string, fi os.FileInfo, err error) error {
 			adjusted := adjustPath(path, target)
 			if fi.IsDir() {
-				if err := os.MkdirAll(adjusted, 0755); err != nil {
-					return err
-				}
-				return copyTree(path, adjusted)
+				return os.MkdirAll(adjusted, 0755)
 			}
 			go copyFile(adjusted, target)
 		})
