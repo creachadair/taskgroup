@@ -1,7 +1,7 @@
 // Package throttle defines rate and concurrency controllers for groups.  A
 // throttler delegates tasks to an underlying group under certain conditions.
 //
-// This package defines the following Functions:
+// This package defines the following functions:
 //
 // Rate returns a wrapper that ensures that tasks enter the group no faster
 // than a predefined number per unit time.
