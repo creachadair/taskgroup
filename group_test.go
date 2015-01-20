@@ -153,3 +153,19 @@ func TestMultipleWaiters(t *testing.T) {
 	}
 	t.Logf("[FYI] Saw %d cancellations", cancellations)
 }
+
+func TestOnError(t *testing.T) {
+	want := errors.New("that's just, like, your opinion, man")
+	var called bool
+	g := New(context.Background(), OnError(func(e error) {
+		t.Logf("Callback received error: %v", e)
+		called = true
+	}))
+	g.Go(func(_ context.Context) error { return want })
+	if err := g.Wait(); err != want {
+		t.Errorf("Wrong error returned: got %v, want %v", err, want)
+	}
+	if !called {
+		t.Error("The OnError callback was not invoked")
+	}
+}

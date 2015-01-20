@@ -48,31 +48,36 @@ type Interface interface {
 // The caller may explicitly cancel the goroutines using the Cancel method.
 // The Wait method should be called to wait for all the goroutines to finish.
 type Group struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	err    error          // final result
-	errc   chan<- error   // input to error collector
-	edone  chan struct{}  // completion signal from error collector
-	wait   sync.Once      // triggers shutdown in Wait
-	wg     sync.WaitGroup // active goroutines
+	ctx     context.Context
+	cancel  context.CancelFunc
+	onError func(error)    // called the first time a task returns non-nil
+	err     error          // final result
+	errc    chan<- error   // input to error collector
+	edone   chan struct{}  // completion signal from error collector
+	wait    sync.Once      // triggers shutdown in Wait
+	wg      sync.WaitGroup // active goroutines
 }
 
 // New constructs a new, empty group based on the specified context.
-func New(ctx context.Context) *Group {
+func New(ctx context.Context, opts ...Option) *Group {
 	gc, cancel := context.WithCancel(ctx)
 	errc := make(chan error)
 	g := &Group{
-		ctx:    gc,
-		cancel: cancel,
-		errc:   errc,
-		edone:  make(chan struct{}),
+		ctx:     gc,
+		cancel:  cancel,
+		onError: func(error) { cancel() },
+		errc:    errc,
+		edone:   make(chan struct{}),
+	}
+	for _, opt := range opts {
+		opt(g)
 	}
 	go func() {
 		defer close(g.edone)
 		for e := range errc {
 			if e != nil && g.err == nil {
 				g.err = e
-				g.cancel()
+				g.onError(e)
 			}
 		}
 	}()
@@ -125,6 +130,22 @@ func (g *Group) Wait() error {
 // Cancel cancels the goroutines in the group.  This method does not block;
 // call Wait if you want to know when the effect is complete.
 func (g *Group) Cancel() { g.cancel() }
+
+// An Option is a setting that controls the behaviour of a *Group.
+type Option func(*Group)
+
+// OnError returns an Option that provides a function to be invoked the first
+// time a task in the group returns a non-nil error.  The error value from the
+// task is passed to f.
+//
+// By default, the group will cancel itself on the first error value; setting
+// OnError(nil) will disable this behaviour.
+func OnError(f func(error)) Option {
+	if f == nil {
+		return func(g *Group) { g.onError = func(error) {} } // do nothing
+	}
+	return func(g *Group) { g.onError = f }
+}
 
 // WaitThen acts as g.Wait, and executes then (unconditionally) before
 // returning the resulting error value.
