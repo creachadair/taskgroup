@@ -46,6 +46,9 @@ type Interface interface {
 	// Cancel signals the tasks in the group to stop their work by cancelling
 	// their context.  It does not block.
 	Cancel()
+
+	// Context returns the context being used by the group.
+	Context() context.Context
 }
 
 // A Group represents a collection of cooperating goroutines that share a
@@ -143,6 +146,9 @@ func (g *Group) Wait() error {
 // Cancel cancels the goroutines in the group.  This method does not block;
 // call Wait if you want to know when the effect is complete.
 func (g *Group) Cancel() { g.cancel() }
+
+// Context returns the context being used by the group.
+func (g *Group) Context() context.Context { return g.ctx }
 
 // An Option is a setting that controls the behaviour of a *Group.
 type Option func(*Group)

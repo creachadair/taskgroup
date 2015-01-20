@@ -35,10 +35,15 @@ func Rate(g group.Interface, interval time.Duration) group.Interface {
 }
 
 // Go adds the task to the group, blocking until the next available admission
-// interval has been reached.  If the group is complete, this blocks forever.
+// interval has been reached.
 func (r *rateLimit) Go(task group.Task) error {
-	<-r.adm.C
-	return r.Interface.Go(task)
+	ctx := r.Interface.Context()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-r.adm.C:
+		return r.Interface.Go(task)
+	}
 }
 
 // Wait waits for all the tasks in the group to finish, then disables the ticker.
@@ -64,9 +69,15 @@ func Capacity(g group.Interface, n int) group.Interface {
 // available.  The task slot will automatically be returned when the task
 // returns, whether or not it was successful.
 func (c *capacity) Go(task group.Task) error {
-	c.adm <- struct{}{} // enter a token into the bucket
-	return c.Interface.Go(func(ctx context.Context) error {
-		defer func() { <-c.adm }() // reclaim a token from the bucket
-		return task(ctx)
-	})
+	ctx := c.Interface.Context()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+
+	case c.adm <- struct{}{}: // enter a token into the bucket
+		return c.Interface.Go(func(ctx context.Context) error {
+			defer func() { <-c.adm }() // reclaim a token from the bucket
+			return task(ctx)
+		})
+	}
 }
