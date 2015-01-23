@@ -59,9 +59,16 @@ type capacity struct {
 // Capacity constructs a group that allows at most n (> 0) concurrent
 // goroutines to be active in g at a time.
 func Capacity(g group.Interface, n int) group.Interface {
+	return SharedCapacity(g, make(chan struct{}, n))
+}
+
+// SharedCapacity constructs a shared capacity group that limits the number of
+// concurrent goroutines in all the groups that share adm, to the capacity of
+// adm.
+func SharedCapacity(g group.Interface, adm chan struct{}) group.Interface {
 	return &capacity{
 		Interface: g,
-		adm:       make(chan struct{}, n),
+		adm:       adm,
 	}
 }
 
