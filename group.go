@@ -155,10 +155,12 @@ type Option func(*Group)
 
 // OnError returns an Option that provides a function to be invoked each time a
 // task in the group returns a non-nil error.  The error value from the task is
-// passed to f.
+// passed to f.  All calls to f are made from a single goroutine, so it is safe
+// for f to access a resource under its control without further locking.
 //
 // By default, the group will cancel itself on the first error value; setting
-// OnError(nil) will disable this behaviour.
+// OnError(nil) will disable this behaviour.  The error function may explicitly
+// cancel the group by calling the group's Cancel method.
 func OnError(f func(error)) Option {
 	if f == nil {
 		return func(g *Group) { g.onError = func(error) {} } // do nothing
