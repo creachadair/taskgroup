@@ -111,7 +111,9 @@ func (g *Group) Go(task Task) error {
 	default:
 		go func() {
 			defer g.wg.Done()
-			if err := task(g.ctx); err != nil {
+			if err := CheckDone(g.ctx); err != nil {
+				g.errc <- err
+			} else if err := task(g.ctx); err != nil {
 				g.errc <- err
 			}
 		}()
