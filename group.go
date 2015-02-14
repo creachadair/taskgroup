@@ -198,9 +198,20 @@ func WaitThen(g Interface, then func()) error {
 func Single(ctx context.Context, task Task) *Group {
 	g := New(ctx)
 	if err := g.Go(task); err != nil {
-		panic(err) // should not be a possible condition
+		panic(err) // should not be possible
 	}
 	return g
+}
+
+// Start starts n instances of task in g.
+func Start(g Interface, n int, task Task) error {
+	for n > 0 {
+		if err := g.Go(task); err != nil {
+			return err
+		}
+		n--
+	}
+	return nil
 }
 
 // CheckDone returns ctx.Err() if ctx has been cancelled or reached its
