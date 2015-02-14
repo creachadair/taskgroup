@@ -19,15 +19,15 @@ func randwait(n int) <-chan time.Time {
 
 func TestSimple(t *testing.T) {
 	g := New(context.Background())
-	for i := 0; i < numTasks; i++ {
-		g.Go(func(ctx context.Context) error {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-randwait(250):
-				return nil
-			}
-		})
+	if err := Start(g, numTasks, func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-randwait(250):
+			return nil
+		}
+	}); err != nil {
+		t.Errorf("Starting %d tasks failed: %v", numTasks, err)
 	}
 	if err := g.Wait(); err != nil {
 		t.Errorf("Group failed, error %v", err)
@@ -195,8 +195,10 @@ func TestAutoCancellation(t *testing.T) {
 	// This little goroutine sleeps until cancelled, then sets cancelled=true.
 	// If the cancellation doesn't occur, we'll get a deadlock (all goroutines
 	// asleep) and the test will fail.
-	var cancelled bool
+	ready := make(chan struct{}) // closed when the sleeper task has started
+	var cancelled bool           // becomes true if cancellation succeeds
 	g.Go(func(ctx context.Context) error {
+		close(ready)
 		select {
 		case <-ctx.Done():
 			cancelled = true
@@ -204,11 +206,14 @@ func TestAutoCancellation(t *testing.T) {
 		}
 	})
 
+	<-ready
 	// This little goroutine returns an error.
 	g.Go(func(_ context.Context) error { return errors.New("you lose") })
 
 	if err := g.Wait(); err == nil {
 		t.Error("Wait should have returned an error, but did not")
+	} else {
+		t.Logf("Got expected error: %v", err)
 	}
 	if !cancelled {
 		t.Error("The sleeper was not cancelled")
