@@ -10,65 +10,75 @@ Go provides excellent and powerful concurrency primitives, in the form of [gorou
 
 For example, consider the case of copying a large directory tree: Walk throught the source directory recursively, creating the parallel target directory structure and spinning up a goroutine to copy each of the files concurrently. This part is simple:
 
-	func copyTree(source, target string) error {
-		err := filepath.Walk(source, func(path string, fi os.FileInfo, err error) error {
-			adjusted := adjustPath(path)
-			if fi.IsDir() {
-				return os.MkdirAll(adjusted, 0755)
-			}
-			go copyFile(adjusted, target)
-			return nil
-		})
-		if err != nil {
-			// ... clean up the output directory ...
+```go
+func copyTree(source, target string) error {
+	err := filepath.Walk(source, func(path string, fi os.FileInfo, err error) error {
+		adjusted := adjustPath(path)
+		if fi.IsDir() {
+			return os.MkdirAll(adjusted, 0755)
 		}
-		return err
+		go copyFile(adjusted, target)
+		return nil
+	})
+	if err != nil {
+		// ... clean up the output directory ...
 	}
+	return err
+}
+```
 
 But of course, it's not quite as easy as that, because how will you know when all the file copies are finished? That's easy: Use a `sync.WaitGroup`:
 
-	var wg sync.WaitGroup
-	...
-	wg.Add(1)
-	go func() {
-	    defer wg.Done()
-	    copyFile(adjusted, target)
-	}()
-	...
-	wg.Wait()
+```go
+var wg sync.WaitGroup
+...
+wg.Add(1)
+go func() {
+    defer wg.Done()
+    copyFile(adjusted, target)
+}()
+...
+wg.Wait()
+```
 
 Okay. Remember, though that copies might fail -- the disk might fill up, or there might be a permissions error, say. If you don't care, you might just log the error and continue, but often in case of error you'd like to back out and clean up your mess. But there's no way to capture the return value from the function inside the goroutine; you will have to pass it back over a channel, which means you now have to thread a channel in through the functions you invoke from the goroutine:
 
-    errs := make(chan error)
-    ...
-	copyFile(adjusted, target, errs)
+```go
+errs := make(chan error)
+...
+go copyFile(adjusted, target, errs)
+```
 
 And of course, you may get more than one error, so you will either need to buffer the channel (so the goroutines don't block trying to write to it), or have another goroutine to clear it out:
 
-	var failures []error
-	go func() {
-	    for e := range errs {
-	        failures = append(failures, e)
-	    }
-	}()
-	...
-	wg.Wait()
-	close(errs)
+```go
+var failures []error
+go func() {
+    for e := range errs {
+        failures = append(failures, e)
+    }
+}()
+...
+wg.Wait()
+close(errs)
+```
 
 You're still not out of the woods, though, because how do you know when the error collector is finished? You'll need another channel or `sync.WaitGroup`) to signal for that:
 
-	var failures []error
-	edone := make(chan struct{})
-	go func() {
-	    for e := range errs {
-	        failures = append(failures, e)
-		}
-		close(edone)	
-	}()
-	...
-	wg.Wait()   // all the workers are done
-	close(errs) // signal the error collector to stop
-	<-edone     // wait for the error collector to be done
+```go
+var failures []error
+edone := make(chan struct{})
+go func() {
+    for e := range errs {
+        failures = append(failures, e)
+	}
+	close(edone)	
+}()
+...
+wg.Wait()   // all the workers are done
+close(errs) // signal the error collector to stop
+<-edone     // wait for the error collector to be done
+```
 
 Okay, so that works. But for this scenario, you really don't want to wait around for all the copies to finish -- if any of the file copies fails, you want to stop what you're doing and give up.  To do that, you'll need to pass in another channel (say) to the workers, which you can close to signal cancellation:
 
@@ -78,14 +88,16 @@ Okay, so that works. But for this scenario, you really don't want to wait around
 
 then `copyFile` will have to check for that:
 
-	func copyFile(source, target string, errs chan<- error, cancel chan struct{}) {
-		select {
-		case <-cancel:
-			return
-		default:
-		 	// ... do the copy as normal, or propagate an error
-		}
+```go
+func copyFile(source, target string, errs chan<- error, cancel chan struct{}) {
+	select {
+	case <-cancel:
+		return
+	default:
+	 	// ... do the copy as normal, or propagate an error
 	}
+}
+```
 
 The lesson here is that, while Go's concurrency primitives are easily powerful enough to express these relationships, it can be tedious to wire them all together. The `group` package was created to help simplify some of the plumbing for the common case of a group of tasks that are all working on a related outcome (_e.g.,_ copying a directory structure), and where an error on the part of any _single_ task is grounds for terminating the work as a whole.
 
@@ -99,18 +111,24 @@ Under the covers, `group` uses almost exactly the plumbing described above:
 
 The API for the caller is straightforward:  A task is expressed as a `func(context.Context) error`, and is added to a group using the `Go` method,
 
-	g := group.New(context.Background())
-	g.Go(myTask)
+```go
+g := group.New(context.Background())
+g.Go(myTask)
+```
 
 Any number of tasks may be added, and it is safe to do so from multiple goroutines concurrently.  To wait for the tasks to finish, use:
 
-	err := g.Wait()
+```go
+err := g.Wait()
+```
 
 This blocks until all the tasks in the group have returned (either successfully, or with an error).  By default, if any task returns a non-nil error, the rest of the tasks are cancelled automatically (this can be overridden with an option to `group.New`).  It is safe to call `g.Wait` from multiple concurrent goroutines, and the result is idempotent.
 
 If the caller wants to cancel the group explicitly, simply invoke:
 
-	g.Cancel()
+```go
+g.Cancel()
+```
 
 A working program demonstrating this example can be found in the `cmd/copytree` subdirectory.
 
@@ -128,11 +146,13 @@ The `group/throttle` package supports a couple of simple cases of this:
 
 Adding these to an existing group is simple:
 
-	// Allow at most 25 concurrently-active goroutines in the group.
-	g := throttle.Capacity(group.New(context.Background()), 25)
+```go
+// Allow at most 25 concurrently-active goroutines in the group.
+g := throttle.Capacity(group.New(context.Background()), 25)
 
-	// Admit at most 1 goroutine to the group every 750 milliseconds.
-	g := throttle.Rate(group.New(context.Background()), 750*time.Millisecond)
+// Admit at most 1 goroutine to the group every 750 milliseconds.
+g := throttle.Rate(group.New(context.Background()), 750*time.Millisecond)
+```
 
 The values returned by the `throttle` functions also satisfy the group interface, so they can be composed with each other if you wish.  In each case, their `Go` method will block until the constraint is satisfied.
 
