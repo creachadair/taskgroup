@@ -47,10 +47,6 @@ func main() {
 			return os.MkdirAll(target, fi.Mode())
 		}
 		return g.Go(func(ctx context.Context) error {
-			if err := group.CheckDone(ctx); err != nil {
-				log.Printf("Canceled copy for %q", path)
-				return err
-			}
 			log.Printf("Copying %q", path)
 			return copyFile(path, target)
 		})
