@@ -181,8 +181,6 @@ start(task2)
 // ...
 ```
 
-The values returned by the `throttle` functions also satisfy the group interface, so they can be composed with each other if you wish.  In each case, their `Go` method will block until the constraint is satisfied.
-
 # Package Documentation
 
 You can view package documentation for the
