@@ -3,6 +3,7 @@ package group
 import (
 	"errors"
 	"math/rand"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,204 +19,95 @@ func randwait(n int) <-chan time.Time {
 }
 
 func TestSimple(t *testing.T) {
-	g := New(context.Background())
-	if err := Start(g, numTasks, func(ctx context.Context) error {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-randwait(250):
-			return nil
-		}
-	}); err != nil {
-		t.Errorf("Starting %d tasks failed: %v", numTasks, err)
-	}
-	if err := g.Wait(); err != nil {
-		t.Errorf("Group failed, error %v", err)
+	var err error
+	g := New(FirstError(&err))
+
+	g.Go(func() error { <-randwait(250); return nil })
+	g.Wait()
+	if err != nil {
+		t.Errorf("Unexpected task error: %v", err)
 	}
 }
 
 func TestCancellation(t *testing.T) {
-	g := New(context.Background())
-	for i := 0; i < numTasks; i++ {
-		g.Go(func(ctx context.Context) error {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-randwait(250):
-				return nil
-			}
-		})
-	}
-	g.Cancel()
-	if err := g.Wait(); err != context.Canceled {
-		t.Errorf("Group error: got %v, want %v", err, context.Canceled)
-	} else {
-		t.Logf("Got desired error: %v", err)
-	}
-}
+	var errs []error
+	g := New(OnError(func(err error) {
+		errs = append(errs, err)
+	}))
 
-func TestErrors(t *testing.T) {
-	g := New(context.Background())
-	errc := make(chan error)
-	var failed, cancelled int32
-	for i := 0; i < numTasks; i++ {
-		g.Go(func(ctx context.Context) error {
-			select {
-			case <-ctx.Done():
-				atomic.AddInt32(&cancelled, 1)
-				return ctx.Err()
-			case err := <-errc:
-				atomic.AddInt32(&failed, 1)
-				return err
-			}
-		})
-	}
-	want := errors.New("fall over and kack")
-	go func() {
-		time.Sleep(75 * time.Millisecond)
-		errc <- want
-	}()
-	if err := g.Wait(); err == nil {
-		t.Errorf("Group error: got %v, want %v", err, want)
-	} else {
-		t.Logf("Got desired error: %v", err)
-	}
-	if failed != 1 {
-		t.Errorf("Failed: got %d, want 1", failed)
-	}
-	if cancelled != numTasks-1 {
-		t.Errorf("Cancelled: got %d, want %d", cancelled, numTasks-1)
-	}
-}
-
-func TestSingle(t *testing.T) {
-	ctx := context.Background()
-
-	// A single task that accumulates values from ch.
-	ch := make(chan int)
-	var n, sum int
-	task := Single(ctx, func(_ context.Context) error {
-		for v := range ch {
-			n++
-			sum += v
-		}
-		return nil
-	})
-
-	// A bunch of tasks that send work to ch.
-	const numValues = 1357
-	g := New(ctx)
-	for i := 0; i < numValues; i++ {
-		g.Go(func(_ context.Context) error {
-			ch <- rand.Intn(100) - 40
-			return nil
-		})
-	}
-	if err := WaitThen(g, func() { close(ch) }); err != nil {
-		t.Errorf("Wait for writers: unexpected error: %v", err)
-	}
-
-	if err := task.Wait(); err != nil {
-		t.Errorf("Wait for reader: unexpected error: %v", err)
-	}
-	t.Logf("Results: n=%d, sum=%d", n, sum)
-	if n != numValues {
-		t.Errorf("Value count: got %d, want %d", n, numValues)
-	}
-}
-
-func TestMultipleWaiters(t *testing.T) {
-	g := New(context.Background()) // Tasks doing nonsense work
-	w := New(context.Background()) // Tasks waiting for the outcome of g
-	want := errors.New("a failure of imagination")
-
-	var cancellations int32
-	for i := 0; i < numTasks; i++ {
-		i := i
-		g.Go(func(ctx context.Context) error {
-			if err := CheckDone(ctx); err != nil {
-				atomic.AddInt32(&cancellations, 1)
-				return err
-			}
-			randwait(500)
-			if i == 1 {
-				return want
-			}
-			return nil
-		})
-	}
-
-	for i := 0; i < numTasks; i++ {
-		w.Go(func(_ context.Context) error { return g.Wait() })
-	}
-	if got := w.Wait(); got != want {
-		t.Errorf("Incorrect error from waiters: got %v, want %v", got, want)
-	}
-	t.Logf("[FYI] Saw %d cancellations", cancellations)
-}
-
-func TestOnError(t *testing.T) {
-	want := errors.New("that's just, like, your opinion, man")
-	var allErrors []error
-	g := New(context.Background())
-	OnError(func(e error) {
-		t.Logf("Callback received error: %v", e)
-		g.Cancel()
-		allErrors = append(allErrors, e)
-	})(g)
-
-	// This goroutine returns an error, triggering the callback to cancel.
-	g.Go(func(_ context.Context) error { return want })
-
-	// This goroutine blocks until the group is cancelled.
-	g.Go(func(ctx context.Context) error {
+	errOther := errors.New("something is wrong")
+	ctx, cancel := context.WithCancel(context.Background())
+	var numOK int32
+	g.StartN(numTasks, func() error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case <-randwait(1):
+			return errOther
+		case <-randwait(1):
+			atomic.AddInt32(&numOK, 1)
+			return nil
 		}
 	})
-
-	// The triggering error should be the original one, but we should also get
-	// the cancellation.
-	if err := g.Wait(); err != want {
-		t.Errorf("Wrong error returned: got %v, want %v", err, want)
+	cancel()
+	g.Wait()
+	var numCanceled, numOther int
+	for _, err := range errs {
+		switch err {
+		case context.Canceled:
+			numCanceled++
+		case errOther:
+			numOther++
+		default:
+			t.Errorf("Unexpected error: %v", err)
+		}
 	}
-	if len(allErrors) == 0 {
-		t.Error("The OnError callback was not invoked")
-	} else {
-		t.Logf("All errors: %q", allErrors)
+	t.Logf("Got %d successful tasks, %d cancelled tasks, and %d other errors",
+		numOK, numCanceled, numOther)
+	if total := int(numOK) + numCanceled + numOther; total != numTasks {
+		t.Errorf("Task count mismatch: got %d results, wanted %d", total, numTasks)
 	}
 }
 
-func TestAutoCancellation(t *testing.T) {
-	// Verify the default behaviour that when one of the goroutines in a group
-	// fails, the others are cancelled.
-	g := New(context.Background())
+func TestCapacity(t *testing.T) {
+	const maxCapacity = 25
+	const numTasks = 1492
+	g := New()
+	start := Capacity(g, maxCapacity)
 
-	// This little goroutine sleeps until cancelled, then sets cancelled=true.
-	// If the cancellation doesn't occur, we'll get a deadlock (all goroutines
-	// asleep) and the test will fail.
-	ready := make(chan struct{}) // closed when the sleeper task has started
-	var cancelled bool           // becomes true if cancellation succeeds
-	g.Go(func(ctx context.Context) error {
-		close(ready)
-		select {
-		case <-ctx.Done():
-			cancelled = true
-			return ctx.Err()
-		}
-	})
-
-	<-ready
-	// This little goroutine returns an error.
-	g.Go(func(_ context.Context) error { return errors.New("you lose") })
-
-	if err := g.Wait(); err == nil {
-		t.Error("Wait should have returned an error, but did not")
+	var p peakValue
+	for i := 0; i < numTasks; i++ {
+		start(func() error {
+			p.inc()
+			defer p.dec()
+			time.Sleep(5 * time.Millisecond)
+			return nil
+		})
+	}
+	g.Wait()
+	if p.max > maxCapacity {
+		t.Errorf("Exceeded maximum capacity: got %d, want %d", p.max, maxCapacity)
 	} else {
-		t.Logf("Got expected error: %v", err)
+		t.Logf("Saw a maximum of %d concurrent tasks", p.max)
 	}
-	if !cancelled {
-		t.Error("The sleeper was not cancelled")
+}
+
+type peakValue struct {
+	μ        sync.Mutex
+	cur, max int
+}
+
+func (p *peakValue) inc() {
+	p.μ.Lock()
+	p.cur++
+	if p.cur > p.max {
+		p.max = p.cur
 	}
+	p.μ.Unlock()
+}
+
+func (p *peakValue) dec() {
+	p.μ.Lock()
+	p.cur--
+	p.μ.Unlock()
 }
