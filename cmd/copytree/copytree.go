@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"bitbucket.org/creachadair/group"
-	"bitbucket.org/creachadair/group/throttle"
 	"golang.org/x/net/context"
 )
 
@@ -37,26 +36,40 @@ func main() {
 		destExists = true
 	}
 
-	g := throttle.Capacity(group.New(context.Background()), *maxWorkers)
+	ctx, cancel := context.WithCancel(context.Background())
+	var copyErr error
+	g := group.New(group.OnError(func(err error) {
+		if copyErr == nil {
+			copyErr = err
+			cancel()
+		}
+	}))
+	start := group.Capacity(g, *maxWorkers)
 	err := filepath.Walk(*srcPath, func(path string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return err
+		if err == nil {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+			target := adjustPath(path)
+			if fi.IsDir() {
+				return os.MkdirAll(target, fi.Mode())
+			}
+			start(func() error {
+				log.Printf("Copying %q", path)
+				return copyFile(ctx, path, target)
+			})
 		}
-		target := adjustPath(path)
-		if fi.IsDir() {
-			return os.MkdirAll(target, fi.Mode())
-		}
-		return g.Go(func(ctx context.Context) error {
-			log.Printf("Copying %q", path)
-			return copyFile(path, target)
-		})
+		return err
 	})
 	if err != nil {
 		log.Printf("Error traversing directory: %v", err)
-		g.Cancel()
+		cancel()
 	}
-	if err := g.Wait(); err != nil {
-		log.Printf("Error copying: %v", err)
+	g.Wait()
+	if copyErr != nil {
+		log.Printf("Error copying: %v", copyErr)
 		if !destExists {
 			log.Printf("Cleaning up %q...", *dstPath)
 			os.RemoveAll(*dstPath)
@@ -72,7 +85,12 @@ func adjustPath(path string) string {
 }
 
 // copyFile copies a plain file from source to target.
-func copyFile(source, target string) error {
+func copyFile(ctx context.Context, source, target string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 	in, err := os.Open(source)
 	if err != nil {
 		return err
