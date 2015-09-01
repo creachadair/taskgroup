@@ -29,6 +29,20 @@ func TestSimple(t *testing.T) {
 	}
 }
 
+func TestErrorPropagation(t *testing.T) {
+	var errBogus = errors.New("bogus")
+	var err error
+	g := New(FirstError(&err))
+	g.Go(func() error { return errBogus })
+	waitErr := g.Wait()
+	if waitErr != errBogus {
+		t.Errorf("Wait: got error %v, wanted %v", waitErr, errBogus)
+	}
+	if err != errBogus {
+		t.Errorf("FirstError: got %v, wanted %v", err, errBogus)
+	}
+}
+
 func TestCancellation(t *testing.T) {
 	var errs []error
 	g := New(OnError(func(err error) {
@@ -80,7 +94,7 @@ func TestCapacity(t *testing.T) {
 		start(func() error {
 			p.inc()
 			defer p.dec()
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(2 * time.Millisecond)
 			return nil
 		})
 	}

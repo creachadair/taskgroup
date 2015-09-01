@@ -151,13 +151,17 @@ g := group.New()
 g.Go(myTask)
 ```
 
-Any number of tasks may be added, and it is safe to do so from multiple goroutines concurrently.  To wait for the tasks to finish, use:
+Any number of tasks may be added, and it is safe to do so from multiple
+goroutines concurrently.  To wait for the tasks to finish, use:
 
 ```go
 g.Wait()
 ```
 
-This blocks until all the tasks in the group have returned (either successfully, or with an error).
+This blocks until all the tasks in the group have returned (either
+successfully, or with an error). `Wait` returns the first non-nil error
+returned by any of the worker tasks.
+
 
 A working program demonstrating this example can be found in the `cmd/copytree` subdirectory.
 
