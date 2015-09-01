@@ -112,20 +112,6 @@ func OnError(f func(error)) Option {
 	return func(g *Group) { g.onError = f }
 }
 
-// FirstError returns an option that captures the first non-nil error returned
-// by any task in *errp. Any subsequent errors are ignored.
-func FirstError(errp *error) Option {
-	return func(g *Group) {
-		first := true
-		g.onError = func(err error) {
-			if first {
-				*errp = err
-				first = false
-			}
-		}
-	}
-}
-
 // Capacity returns a function that starts each task passed to it in g,
 // allowing no more than n tasks to be active concurrently.
 func Capacity(g *Group, n int) func(Task) {
