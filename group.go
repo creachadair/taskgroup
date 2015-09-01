@@ -113,8 +113,12 @@ func OnError(f func(error)) Option {
 }
 
 // Capacity returns a function that starts each task passed to it in g,
-// allowing no more than n tasks to be active concurrently.
+// allowing no more than n tasks to be active concurrently.  If n ≤ 0, the
+// function is equivalent to g.Go, and enforces no limit.
 func Capacity(g *Group, n int) func(Task) {
+	if n <= 0 {
+		return g.Go
+	}
 	adm := make(chan struct{}, n)
 	return func(task Task) {
 		g.Go(func() error {
