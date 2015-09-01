@@ -107,7 +107,7 @@ type Option func(*Group)
 // for f to access a resource under its control without further locking.
 func OnError(f func(error)) Option {
 	if f == nil {
-		return func(g *Group) { g.onError = func(error) {} } // do nothing
+		return func(g *Group) {} // do nothing
 	}
 	return func(g *Group) { g.onError = f }
 }
