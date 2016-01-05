@@ -37,12 +37,8 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	var copyErr error
 	g := group.New(group.OnError(func(err error) {
-		if copyErr == nil {
-			copyErr = err
-			cancel()
-		}
+		cancel()
 	}))
 	start := group.Capacity(g, *maxWorkers)
 	err := filepath.Walk(*srcPath, func(path string, fi os.FileInfo, err error) error {
@@ -67,9 +63,8 @@ func main() {
 		log.Printf("Error traversing directory: %v", err)
 		cancel()
 	}
-	g.Wait()
-	if copyErr != nil {
-		log.Printf("Error copying: %v", copyErr)
+	if err := g.Wait(); err != nil {
+		log.Printf("Error copying: %v", err)
 		if !destExists {
 			log.Printf("Cleaning up %q...", *dstPath)
 			os.RemoveAll(*dstPath)
