@@ -18,38 +18,20 @@ func randwait(n int) <-chan time.Time {
 	return time.After(time.Duration(rand.Intn(n)) * time.Millisecond)
 }
 
-func firstError(ep *error) Option {
-	return func(g *Group) {
-		g.onError = func(err error) {
-			if *ep == nil {
-				*ep = err
-			}
-		}
-	}
-}
-
 func TestSimple(t *testing.T) {
-	var err error
-	g := New(firstError(&err))
-
+	g := New()
 	g.Go(func() error { <-randwait(250); return nil })
-	g.Wait()
-	if err != nil {
+	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected task error: %v", err)
 	}
 }
 
 func TestErrorPropagation(t *testing.T) {
 	var errBogus = errors.New("bogus")
-	var err error
-	g := New(firstError(&err))
+	g := New()
 	g.Go(func() error { return errBogus })
-	waitErr := g.Wait()
-	if waitErr != errBogus {
-		t.Errorf("Wait: got error %v, wanted %v", waitErr, errBogus)
-	}
-	if err != errBogus {
-		t.Errorf("First error: got %v, wanted %v", err, errBogus)
+	if err := g.Wait(); err != errBogus {
+		t.Errorf("Wait: got error %v, wanted %v", err, errBogus)
 	}
 }
 
