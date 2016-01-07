@@ -44,7 +44,7 @@ func TestCancellation(t *testing.T) {
 	errOther := errors.New("something is wrong")
 	ctx, cancel := context.WithCancel(context.Background())
 	var numOK int32
-	g.StartN(numTasks, func() error {
+	g.StartN(numTasks, func(int) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

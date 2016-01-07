@@ -75,11 +75,12 @@ func (g *Group) Go(task Task) {
 	}()
 }
 
-// StartN starts n separate goroutines running task in g.
-func (g *Group) StartN(n int, task Task) {
-	for n > 0 {
-		g.Go(task)
-		n--
+// StartN starts n separate goroutines running task in g.  Each instance of
+// task is called with a distinct ID 0 ≤ i < n.
+func (g *Group) StartN(n int, task func(i int) error) {
+	for ; n > 0; n-- {
+		i := n - 1
+		g.Go(func() error { return task(i) })
 	}
 }
 
