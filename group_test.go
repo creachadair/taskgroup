@@ -2,6 +2,7 @@ package group
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -116,4 +117,23 @@ func (p *peakValue) dec() {
 	p.μ.Lock()
 	p.cur--
 	p.μ.Unlock()
+}
+
+func ExampleGroup() {
+	msg := make(chan string)
+	g := New()
+	g.Go(func() error {
+		msg <- "ping"
+		fmt.Print(<-msg)
+		return nil
+	})
+	g.Go(func() error {
+		fmt.Print(<-msg)
+		msg <- "pong"
+		return nil
+	})
+	g.Wait()
+	fmt.Println("<done>")
+
+	// Output: pingpong<done>
 }
