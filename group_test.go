@@ -83,19 +83,22 @@ func TestCapacity(t *testing.T) {
 	start := Capacity(g, maxCapacity)
 
 	var p peakValue
+	var n int32
 	for i := 0; i < numTasks; i++ {
 		start(func() error {
 			p.inc()
 			defer p.dec()
 			time.Sleep(2 * time.Millisecond)
+			atomic.AddInt32(&n, 1)
 			return nil
 		})
 	}
 	g.Wait()
+	t.Logf("Total tasks completed: %d", n)
 	if p.max > maxCapacity {
 		t.Errorf("Exceeded maximum capacity: got %d, want %d", p.max, maxCapacity)
 	} else {
-		t.Logf("Saw a maximum of %d concurrent tasks", p.max)
+		t.Logf("Maximum concurrent tasks: %d", p.max)
 	}
 }
 
