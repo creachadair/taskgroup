@@ -138,3 +138,14 @@ func ExampleGroup() {
 
 	// Output: pingpong<done>
 }
+
+func ExampleStartN() {
+	var sum int32
+	g := New().StartN(15, func(i int) error {
+		atomic.AddInt32(&sum, int32(i+1))
+		return nil
+	})
+	g.Wait()
+	fmt.Print("sum = ", sum)
+	// Output: sum = 120
+}
