@@ -20,8 +20,7 @@ func randwait(n int) <-chan time.Time {
 }
 
 func TestSimple(t *testing.T) {
-	g := New()
-	g.Go(func() error { <-randwait(250); return nil })
+	g := New().Go(func() error { <-randwait(250); return nil })
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected task error: %v", err)
 	}
@@ -29,8 +28,7 @@ func TestSimple(t *testing.T) {
 
 func TestErrorPropagation(t *testing.T) {
 	var errBogus = errors.New("bogus")
-	g := New()
-	g.Go(func() error { return errBogus })
+	g := New().Go(func() error { return errBogus })
 	if err := g.Wait(); err != errBogus {
 		t.Errorf("Wait: got error %v, wanted %v", err, errBogus)
 	}

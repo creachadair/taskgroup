@@ -45,8 +45,8 @@ func New(opts ...Option) *Group {
 	return g
 }
 
-// Go adds a new task to the group.
-func (g *Group) Go(task Task) {
+// Go adds a new task to the group.  Returns g to permit chaining.
+func (g *Group) Go(task Task) *Group {
 	g.wg.Add(1)
 
 	// The first time a task is added to an otherwise clear group, set up the
@@ -73,15 +73,17 @@ func (g *Group) Go(task Task) {
 			g.errc <- err
 		}
 	}()
+	return g
 }
 
 // StartN starts n separate goroutines running task in g.  Each instance of
-// task is called with a distinct ID 0 ≤ i < n.
-func (g *Group) StartN(n int, task func(i int) error) {
+// task is called with a distinct ID 0 ≤ i < n.  Returns g to permit chaining.
+func (g *Group) StartN(n int, task func(i int) error) *Group {
 	for ; n > 0; n-- {
 		i := n - 1
 		g.Go(func() error { return task(i) })
 	}
+	return g
 }
 
 // Wait blocks until all the goroutines currently active in the group have
@@ -116,17 +118,18 @@ func OnError(f func(error)) Option {
 // Capacity returns a function that starts each task passed to it in g,
 // allowing no more than n tasks to be active concurrently.  If n ≤ 0, the
 // function is equivalent to g.Go, and enforces no limit.
-func Capacity(g *Group, n int) func(Task) {
+func Capacity(g *Group, n int) func(Task) *Group {
 	if n <= 0 {
 		return g.Go
 	}
 	adm := make(chan struct{}, n)
-	return func(task Task) {
+	return func(task Task) *Group {
 		g.Go(func() error {
 			adm <- struct{}{}
 			err := task()
 			<-adm
 			return err
 		})
+		return g
 	}
 }
