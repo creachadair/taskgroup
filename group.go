@@ -48,7 +48,15 @@ func New(opts ...Option) *Group {
 // Go adds a new task to the group.  Returns g to permit chaining.
 func (g *Group) Go(task Task) *Group {
 	g.wg.Add(1)
+	g.init()
+	go func() {
+		defer g.wg.Done()
+		g.report(task())
+	}()
+	return g
+}
 
+func (g *Group) init() {
 	// The first time a task is added to an otherwise clear group, set up the
 	// error collector goroutine.  We don't do this in the constructor so that
 	// an unused group can be abandoned without orphaning a goroutine.
@@ -67,21 +75,22 @@ func (g *Group) Go(task Task) *Group {
 			}
 		}()
 	})
-	go func() {
-		defer g.wg.Done()
-		if err := task(); err != nil {
-			g.errc <- err
-		}
-	}()
-	return g
+}
+
+func (g *Group) report(err error) {
+	if err != nil {
+		g.errc <- err
+	}
 }
 
 // StartN starts n separate goroutines running task in g.  Each instance of
-// task is called with a distinct ID 0 ≤ i < n.  Returns g to permit chaining.
-func (g *Group) StartN(n int, task func(i int) error) *Group {
+// task is called with a distinct ID 0 ≤ i < n.  Tasks report errors by calling
+// the report function.  StartN returns g to permit chaining.
+func (g *Group) StartN(n int, task func(i int, report func(error))) *Group {
+	g.init()
 	for ; n > 0; n-- {
 		i := n - 1
-		g.Go(func() error { return task(i) })
+		g.Go(func() error { task(i, g.report); return nil })
 	}
 	return g
 }
