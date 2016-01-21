@@ -87,10 +87,14 @@ func (g *Group) init() {
 // task is called with a distinct ID 0 ≤ i < n.  Tasks report errors by calling
 // the report function.  StartN returns g to permit chaining.
 func (g *Group) StartN(n int, task func(i int, report func(error))) *Group {
+	g.wg.Add(n)
 	g.init()
-	for ; n > 0; n-- {
-		i := n - 1
-		g.Go(func() error { task(i, g.report); return nil })
+	for i := 0; i < n; i++ {
+		i := i
+		go func() {
+			defer g.wg.Done()
+			task(i, g.report)
+		}()
 	}
 	return g
 }
