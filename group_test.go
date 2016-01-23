@@ -3,6 +3,7 @@ package group
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -124,18 +125,21 @@ func ExampleGroup() {
 	g := New()
 	g.Go(func() error {
 		msg <- "ping"
-		fmt.Print(<-msg)
+		fmt.Println(<-msg)
 		return nil
 	})
 	g.Go(func() error {
-		fmt.Print(<-msg)
+		fmt.Println(<-msg)
 		msg <- "pong"
 		return nil
 	})
 	g.Wait()
 	fmt.Println("<done>")
 
-	// Output: pingpong<done>
+	// Output:
+	// ping
+	// pong
+	// <done>
 }
 
 func ExampleStartN() {
@@ -146,4 +150,29 @@ func ExampleStartN() {
 	g.Wait()
 	fmt.Print("sum = ", sum)
 	// Output: sum = 120
+}
+
+func ExampleErrTrigger() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	const badTask = 5
+	g := New(ErrTrigger(cancel))
+	g.StartN(10, func(i int, report func(error)) {
+		if i == badTask {
+			report(fmt.Errorf("task %d failed", i))
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Second):
+			return
+		}
+	})
+
+	if err := g.Wait(); err == nil {
+		log.Fatal("I expected an error here")
+	} else {
+		fmt.Println(err.Error())
+	}
+	// Output: task 5 failed
 }
