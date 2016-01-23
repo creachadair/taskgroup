@@ -167,9 +167,14 @@ A working program demonstrating this example can be found in the `cmd/copytree` 
 
 ## Controlling Concurrency
 
-Although goroutines are inexpensive to start up, it is often useful to limit the number of _active_ goroutines in a program, to avoid various kinds of resource exhaustion (CPU, memory, in-flight RPCs, etc.).  Doing so often requires a bunch of additional plumbing to restrict when goroutines may be started or become active.
+Although goroutines are inexpensive to start up, it is often useful to limit
+the number of _active_ goroutines in a program, to avoid various kinds of
+resource exhaustion (CPU, memory, in-flight RPCs, etc.).  Doing so often
+requires a bunch of additional plumbing to restrict when goroutines may be
+started or become active.
 
-The `Capacity` function limits the maximum number of goroutines that a group will have active concurrently.
+The `Capacity` function limits the maximum number of goroutines that a group
+will have active concurrently.
 
 Adding this is simple:
 
