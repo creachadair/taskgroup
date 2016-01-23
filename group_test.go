@@ -142,7 +142,7 @@ func ExampleGroup() {
 	// <done>
 }
 
-func ExampleStartN() {
+func ExampleGroup_StartN() {
 	var sum int32
 	g := New().StartN(15, func(i int, report func(error)) {
 		atomic.AddInt32(&sum, int32(i+1))
