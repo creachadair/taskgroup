@@ -1,5 +1,5 @@
-// Package group manages a collection of cancellable goroutines.
-//
+// Package group manages a collection of cancellable goroutines.  It simplifies
+// common concerns of waiting for goroutine termination and collecting errors.
 package group
 
 import "sync"
@@ -8,23 +8,14 @@ import "sync"
 // value, and is the basic unit of work in a Group.
 type Task func() error
 
-// A Group represents a collection of cooperating goroutines.  New tasks can be
-// added to the group via the Go method.
+// A Group manages a collection of cooperating goroutines.  New tasks can be
+// added to the group via the Go and StartN methods.  The caller can wait for
+// the tasks to complete by calling the Wait method.
 //
-// Any error returned by a task is passed to the callback function provided
-// when the Group was constructed.  The callback can use this to log errors or
-// cancel the work.  All calls to the callback come from a single goroutine.
-//
-// Basic usage example:
-//   ctx, cancel := context.WithCancel(ctx)
-//   g := group.New(group.OnError(func(error) { cancel() }))
-//   g.Go(f1)
-//   g.Go(f2)
-//   ...
-//   if err := g.Wait(); err != nil {
-//     log.Printf("An error occurred: %v", err)
-//   }
-//
+// The group collects any errors returned or reported by each task.  Errors can
+// also optionally be reported to a user-defined callback provided via the
+// OnError or FilterError options.  The first non-nil error reported by any
+// task (and not otherwise filtered) is returned from the Wait method.
 type Group struct {
 	onError func(error) error // called each time a task returns non-nil
 	wg      sync.WaitGroup    // counter for active goroutines
