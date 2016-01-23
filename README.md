@@ -155,7 +155,7 @@ Any number of tasks may be added, and it is safe to do so from multiple
 goroutines concurrently.  To wait for the tasks to finish, use:
 
 ```go
-g.Wait()
+err := g.Wait()
 ```
 
 This blocks until all the tasks in the group have returned (either
