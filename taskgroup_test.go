@@ -1,4 +1,4 @@
-package group
+package taskgroup
 
 import (
 	"errors"

@@ -1,6 +1,6 @@
-# group
+# taskgroup
 
-A `*group.Group` represents a group of goroutines working on related tasks.
+A `*taskgroup.Group` represents a group of goroutines working on related tasks.
 New tasks can be added to the group at will, and the caller can wait until all
 tasks are complete. Errors are automatically collected and delivered to a
 user-provided callback in a single goroutine.  This does not replace the full
@@ -128,26 +128,26 @@ func copyFile(source, target string, errs chan<- error, cancel chan struct{}) {
 
 The lesson here is that, while Go's concurrency primitives are easily powerful
 enough to express these relationships, it can be tedious to wire them all
-together. The `group` package was created to help simplify some of the plumbing
-for the common case of a group of tasks that are all working on a related
-outcome (_e.g.,_ copying a directory structure), and where an error on the part
-of any _single_ task is grounds for terminating the work as a whole.
+together. The `taskgroup` package was created to help simplify some of the
+plumbing for the common case of a group of tasks that are all working on a
+related outcome (_e.g.,_ copying a directory structure), and where an error on
+the part of any _single_ task is grounds for terminating the work as a whole.
 
-The `group` package supports some of the plumbing described above:
+The `taskgroup` package supports some of the plumbing described above:
 
  - For cancellation, you can use [context](http://godoc.org/golang.org/x/net/context) package.
-   The `group` package doesn't handle this piece.
+   The `taskgroup` package doesn't handle this piece.
 
- - The `*group.Group` value manages collecting `error` values from its tasks,
-   and delivers them to a user-provided callback. Invocations of the callback
-   are all done from a single goroutine, so it is safe to have the callback
-   manipulate local resources without a lock.
+ - The `*taskgroup.Group` value manages collecting `error` values from its
+   tasks, and delivers them to a user-provided callback. Invocations of the
+   callback are all done from a single goroutine, so it is safe to have the
+   callback manipulate local resources without a lock.
 
 The API for the caller is straightforward: A task is expressed as a `func()
 error`, and is added to a group using the `Go` method,
 
 ```go
-g := group.New()
+g := taskgroup.New()
 g.Go(myTask)
 ```
 
@@ -179,12 +179,12 @@ will have active concurrently.
 Adding this is simple:
 
 ```go
-g := group.New(/* ... */)
+g := taskgroup.New(/* ... */)
 
 // Allow at most 25 concurrently-active goroutines in the group.
-start := group.Capacity(g, 25)
+start := taskgroup.Capacity(g, 25)
 
-// Start tasks by calling the function returned by group.Capacity:
+// Start tasks by calling the function returned by taskgroup.Capacity:
 start(task1)
 start(task2)
 // ...
@@ -193,5 +193,5 @@ start(task2)
 # Package Documentation
 
 You can view package documentation for the
-[group](http://godoc.org/bitbucket.org/creachadair/group) package on
+[taskgroup](http://godoc.org/bitbucket.org/creachadair/taskgroup) package on
 [GoDoc](http://godoc.org/).

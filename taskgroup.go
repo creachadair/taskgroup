@@ -1,6 +1,7 @@
-// Package group manages a collection of cancellable goroutines.  It simplifies
-// common concerns of waiting for goroutine termination and collecting errors.
-package group
+// Package taskgroup manages a collection of cancellable goroutines.  It
+// simplifies common concerns of waiting for goroutine termination and
+// collecting errors.
+package taskgroup
 
 import "sync"
 
