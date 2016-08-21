@@ -1,6 +1,7 @@
 package taskgroup
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -9,8 +10,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 const numTasks = 64
