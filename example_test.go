@@ -2,6 +2,7 @@ package taskgroup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync/atomic"
@@ -10,7 +11,7 @@ import (
 
 func ExampleGroup() {
 	msg := make(chan string)
-	g := New()
+	g := New(nil)
 	g.Go(func() error {
 		msg <- "ping"
 		fmt.Println(<-msg)
@@ -32,7 +33,7 @@ func ExampleGroup() {
 
 func ExampleGroup_StartN() {
 	var sum int32
-	g := New().StartN(15, func(i int, report func(error)) {
+	g := New(nil).StartN(15, func(i int, report func(error)) {
 		atomic.AddInt32(&sum, int32(i+1))
 	})
 	g.Wait()
@@ -40,11 +41,11 @@ func ExampleGroup_StartN() {
 	// Output: sum = 120
 }
 
-func ExampleErrTrigger() {
+func ExampleTrigger() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	const badTask = 5
-	g := New(ErrTrigger(cancel))
+	g := New(Trigger(cancel))
 	g.StartN(10, func(i int, report func(error)) {
 		if i == badTask {
 			report(fmt.Errorf("task %d failed", i))
@@ -63,4 +64,13 @@ func ExampleErrTrigger() {
 		fmt.Println(err.Error())
 	}
 	// Output: task 5 failed
+}
+
+func ExampleListen() {
+	g := New(Listen(func(e error) { fmt.Println(e) }))
+	g.Go(func() error { return errors.New("heard you") })
+	fmt.Println(g.Wait()) // the error was preserved
+	// Output:
+	// heard you
+	// heard you
 }

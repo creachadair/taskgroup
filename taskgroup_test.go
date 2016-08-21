@@ -1,13 +1,14 @@
 package taskgroup
 
 import (
-	"context"
 	"errors"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 const numTasks = 64
@@ -17,8 +18,19 @@ func randwait(n int) <-chan time.Time {
 	return time.After(time.Duration(rand.Intn(n)) * time.Millisecond)
 }
 
-func TestSimple(t *testing.T) {
-	g := New().Go(func() error { <-randwait(250); return nil })
+// busyWork returns a Task that does nothing for n ms and returns err.
+func busyWork(n int, err error) Task { return func() error { <-randwait(n); return err } }
+
+func TestBasic(t *testing.T) {
+	// Verify that the group works at all.
+	g := New(nil).Go(busyWork(25, nil))
+	if err := g.Wait(); err != nil {
+		t.Errorf("Unexpected task error: %v", err)
+	}
+
+	// Verify that the group can be reused.
+	g.Go(busyWork(50, nil))
+	g.Go(busyWork(75, nil))
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected task error: %v", err)
 	}
@@ -26,7 +38,7 @@ func TestSimple(t *testing.T) {
 
 func TestErrorPropagation(t *testing.T) {
 	var errBogus = errors.New("bogus")
-	g := New().Go(func() error { return errBogus })
+	g := New(nil).Go(func() error { return errBogus })
 	if err := g.Wait(); err != errBogus {
 		t.Errorf("Wait: got error %v, wanted %v", err, errBogus)
 	}
@@ -34,7 +46,7 @@ func TestErrorPropagation(t *testing.T) {
 
 func TestCancellation(t *testing.T) {
 	var errs []error
-	g := New(OnError(func(err error) {
+	g := New(Listen(func(err error) {
 		errs = append(errs, err)
 	}))
 
@@ -74,7 +86,7 @@ func TestCancellation(t *testing.T) {
 func TestCapacity(t *testing.T) {
 	const maxCapacity = 25
 	const numTasks = 1492
-	g := New()
+	g := New(nil)
 	start := Capacity(g, maxCapacity)
 
 	var p peakValue

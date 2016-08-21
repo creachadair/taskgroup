@@ -147,7 +147,7 @@ The API for the caller is straightforward: A task is expressed as a `func()
 error`, and is added to a group using the `Go` method,
 
 ```go
-g := taskgroup.New()
+g := taskgroup.New(nil)
 g.Go(myTask)
 ```
 
@@ -179,7 +179,7 @@ will have active concurrently.
 Adding this is simple:
 
 ```go
-g := taskgroup.New(/* ... */)
+g := taskgroup.New(nil)
 
 // Allow at most 25 concurrently-active goroutines in the group.
 start := taskgroup.Capacity(g, 25)
