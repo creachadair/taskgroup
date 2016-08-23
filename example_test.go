@@ -74,3 +74,22 @@ func ExampleListen() {
 	// heard you
 	// heard you
 }
+
+func ExampleCapacity() {
+	var p peakValue
+
+	g := New(nil)
+	start := Capacity(g, 4)
+	for i := 0; i < 100; i++ {
+		start(func() error {
+			p.inc()
+			defer p.dec()
+			time.Sleep(1 * time.Microsecond)
+			return nil
+		})
+	}
+	g.Wait()
+	fmt.Println("Max active:", p.max)
+	// Output:
+	// Max active: 4
+}
