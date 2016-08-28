@@ -29,7 +29,9 @@ type Group struct {
 }
 
 // New constructs a new, empty group.  Add tasks to the group using g.Go.  Wait
-// for the group to complete with g.Wait.
+// for the group to complete with g.Wait.  If ef != nil, it is called each time
+// a task reports an error.  The error returned by the ErrorFunc replaces the
+// task's error.
 func New(ef ErrorFunc) *Group {
 	if ef == nil {
 		ef = func(e error) error { return e }
@@ -37,7 +39,7 @@ func New(ef ErrorFunc) *Group {
 	return &Group{setup: new(sync.Once), onError: ef}
 }
 
-// Go adds a new task to the group.  Returns g to permit chaining.
+// Go adds a new task to the group, and returns g to permit chaining.
 func (g *Group) Go(task Task) *Group {
 	g.wg.Add(1)
 	g.init()
@@ -92,9 +94,9 @@ func (g *Group) StartN(n int, task func(i int, report func(error))) *Group {
 }
 
 // Wait blocks until all the goroutines currently active in the group have
-// returned, and all reported errors have been delivered to the callback.
-// Wait returns the first non-nil error returned by any of the goroutines
-// in the group.
+// returned, and all reported errors have been delivered to the callback.  Wait
+// returns the first non-nil error returned by any of the goroutines in the
+// group and not filtered by an ErrorFunc.
 func (g *Group) Wait() error {
 	g.wg.Wait()
 	if g.errc != nil {
@@ -107,8 +109,7 @@ func (g *Group) Wait() error {
 	return g.err
 }
 
-// An ErrorFunc is called by a group each time a task reports an error.  The
-// error returned by the ErrorFunc replaces the task's error.
+// An ErrorFunc is called by a group each time a task reports an error.
 type ErrorFunc func(error) error
 
 // Trigger adapts f to an ErrorFunc.
