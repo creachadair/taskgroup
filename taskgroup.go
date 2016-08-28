@@ -112,10 +112,12 @@ func (g *Group) Wait() error {
 // An ErrorFunc is called by a group each time a task reports an error.
 type ErrorFunc func(error) error
 
-// Trigger adapts f to an ErrorFunc.
+// Trigger adapts f to an ErrorFunc. The resulting function returns task errors
+// unmodified.
 func Trigger(f func()) ErrorFunc { return func(e error) error { f(); return e } }
 
-// Listen adapts f to an ErrorFunc.
+// Listen adapts f to an ErrorFunc. The resulting function returns task errors
+// unmodified.
 func Listen(f func(error)) ErrorFunc { return func(e error) error { f(e); return e } }
 
 // Capacity returns a function that starts each task passed to it in g,
