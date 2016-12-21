@@ -43,6 +43,7 @@ func ExampleGroup_StartN() {
 
 func ExampleTrigger() {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	const badTask = 5
 	g := New(Trigger(cancel))
