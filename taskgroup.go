@@ -1,4 +1,4 @@
-// Package taskgroup manages a collection of cancellable goroutines.  It
+// Package taskgroup manages a collection of cooperating goroutines.  It
 // simplifies common concerns of waiting for goroutine termination and
 // collecting errors.
 package taskgroup

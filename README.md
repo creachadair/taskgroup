@@ -116,7 +116,7 @@ cancellation:
 then `copyFile` will have to check for that:
 
 ```go
-func copyFile(source, target string, errs chan<- error, cancel chan struct{}) {
+func copyFile(source, target string, errs chan<- error, cancel <-chan struct{}) {
 	select {
 	case <-cancel:
 		return
@@ -135,8 +135,9 @@ the part of any _single_ task is grounds for terminating the work as a whole.
 
 The `taskgroup` package supports some of the plumbing described above:
 
- - For cancellation, you can use [context](http://godoc.org/golang.org/x/net/context) package.
-   The `taskgroup` package doesn't handle this piece.
+ - For cancellation, you can use the
+   [context](http://godoc.org/golang.org/x/net/context) package.  The
+   `taskgroup` package doesn't handle this piece.
 
  - The `*taskgroup.Group` value manages collecting `error` values from its
    tasks, and delivers them to a user-provided callback. Invocations of the
@@ -147,8 +148,7 @@ The API for the caller is straightforward: A task is expressed as a `func()
 error`, and is added to a group using the `Go` method,
 
 ```go
-g := taskgroup.New(nil)
-g.Go(myTask)
+g := taskgroup.New(nil).Go(myTask)
 ```
 
 Any number of tasks may be added, and it is safe to do so from multiple
@@ -162,8 +162,8 @@ This blocks until all the tasks in the group have returned (either
 successfully, or with an error). `Wait` returns the first non-nil error
 returned by any of the worker tasks.
 
-
-A working program demonstrating this example can be found in the `cmd/copytree` subdirectory.
+A working program demonstrating this example can be found in the `cmd/copytree`
+subdirectory.
 
 ## Controlling Concurrency
 
