@@ -97,6 +97,8 @@ func (g *Group) StartN(n int, task func(i int, report func(error))) *Group {
 // returned, and all reported errors have been delivered to the callback.  Wait
 // returns the first non-nil error returned by any of the goroutines in the
 // group and not filtered by an ErrorFunc.
+//
+// After a call to Wait returns, the group is ready for reuse.
 func (g *Group) Wait() error {
 	g.wg.Wait()
 	if g.errc != nil {
