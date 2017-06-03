@@ -111,7 +111,9 @@ func (g *Group) Wait() error {
 	return g.err
 }
 
-// An ErrorFunc is called by a group each time a task reports an error.
+// An ErrorFunc is called by a group each time a task reports an error.  Its
+// return value replaces the reported error, so the ErrorFunc can filter or
+// suppress errors by modifying or discarding the input error.
 type ErrorFunc func(error) error
 
 // Trigger adapts f to an ErrorFunc. The resulting function returns task errors
