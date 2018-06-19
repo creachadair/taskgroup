@@ -1,5 +1,7 @@
 # taskgroup
 
+http://godoc.org/bitbucket.org/creachadair/taskgroup
+
 [![Go Report Card](https://goreportcard.com/badge/bitbucket.org/creachadair/taskgroup)](https://goreportcard.com/report/bitbucket.org/creachadair/taskgroup)
 
 A `*taskgroup.Group` represents a group of goroutines working on related tasks.
@@ -191,9 +193,3 @@ start(task1)
 start(task2)
 // ...
 ```
-
-# Package Documentation
-
-You can view package documentation for the
-[taskgroup](http://godoc.org/bitbucket.org/creachadair/taskgroup) package on
-[GoDoc](http://godoc.org/).
