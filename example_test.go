@@ -90,7 +90,7 @@ func ExampleCapacity() {
 		})
 	}
 	g.Wait()
-	fmt.Println("Max active:", p.max)
+	fmt.Printf("Max active ≤ 4: %v\n", p.max <= 4)
 	// Output:
-	// Max active: 4
+	// Max active ≤ 4: true
 }
