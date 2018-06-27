@@ -50,11 +50,17 @@ func main() {
 			target := adjustPath(path)
 			if fi.IsDir() {
 				return os.MkdirAll(target, fi.Mode())
+			} else if fi.Mode()&os.ModeType == os.ModeSymlink {
+				start(func() error {
+					log.Printf("Relinking %q", path)
+					return copyLink(ctx, path, target)
+				})
+			} else {
+				start(func() error {
+					log.Printf("Copying %q", path)
+					return copyFile(ctx, path, target)
+				})
 			}
-			start(func() error {
-				log.Printf("Copying %q", path)
-				return copyFile(ctx, path, target)
-			})
 		}
 		return err
 	})
@@ -99,4 +105,21 @@ func copyFile(ctx context.Context, source, target string) error {
 		return err
 	}
 	return out.Close()
+}
+
+// copyLink transfers a symlink from source to target. It is an error if the
+// content of source cannot be made relative to source.
+func copyLink(ctx context.Context, source, target string) error {
+	link, err := os.Readlink(source)
+	if err != nil {
+		return err
+	}
+	if !filepath.IsAbs(link) {
+		link = filepath.Join(source, link)
+	}
+	rel, err := filepath.Rel(source, link)
+	if err != nil {
+		return err
+	}
+	return os.Symlink(rel, target)
 }
