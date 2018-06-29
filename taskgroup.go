@@ -13,10 +13,9 @@ type Task func() error
 // added to the group via the Go method.  The caller can wait for the tasks to
 // complete by calling the Wait method.
 //
-// The group collects any errors returned or reported by each task.  Errors can
-// also optionally be reported to a user-defined callback (see "New").  The
-// first non-nil error reported by any task (and not otherwise filtered) is
-// returned from the Wait method.
+// The group collects any errors returned by the tasks in the group. The first
+// non-nil error reported by any task (and not otherwise filtered) is returned
+// from the Wait method.
 type Group struct {
 	onError func(error) error // called each time a task returns non-nil
 	wg      sync.WaitGroup    // counter for active goroutines
