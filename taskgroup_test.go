@@ -90,7 +90,7 @@ func TestCapacity(t *testing.T) {
 	const maxCapacity = 25
 	const numTasks = 1492
 	g := New(nil)
-	start := Capacity(g, maxCapacity)
+	start := g.Capacity(maxCapacity)
 
 	var p peakValue
 	var n int32

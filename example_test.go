@@ -73,11 +73,11 @@ func ExampleListen() {
 	// heard you
 }
 
-func ExampleCapacity() {
+func ExampleGroup_Capacity() {
 	var p peakValue
 
 	g := taskgroup.New(nil)
-	start := taskgroup.Capacity(g, 4)
+	start := g.Capacity(4)
 	for i := 0; i < 100; i++ {
 		start(func() error {
 			p.inc()

@@ -177,8 +177,8 @@ resource exhaustion (CPU, memory, in-flight RPCs, etc.).  Doing so often
 requires a bunch of additional plumbing to restrict when goroutines may be
 started or become active.
 
-The `Capacity` function limits the maximum number of goroutines that a group
-will have active concurrently.
+The `Capacity` method limits the maximum number of goroutines that a group will
+have active concurrently.
 
 Adding this is simple:
 
@@ -186,7 +186,7 @@ Adding this is simple:
 g := taskgroup.New(nil)
 
 // Allow at most 25 concurrently-active goroutines in the group.
-start := taskgroup.Capacity(g, 25)
+start := g.Capacity(25)
 
 // Start tasks by calling the function returned by taskgroup.Capacity:
 start(task1)
