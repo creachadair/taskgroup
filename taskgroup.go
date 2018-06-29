@@ -107,10 +107,10 @@ func Trigger(f func()) ErrorFunc { return func(e error) error { f(); return e } 
 // unmodified.
 func Listen(f func(error)) ErrorFunc { return func(e error) error { f(e); return e } }
 
-// Capacity returns a function that starts each task passed to it in g,
-// allowing no more than n tasks to be active concurrently.  If n ≤ 0, the
-// function is equivalent to g.Go, and enforces no limit.
-func (g *Group) Capacity(n int) func(Task) *Group {
+// Limit returns a function that starts each task passed to it in g, allowing
+// no more than n tasks to be active concurrently.  If n ≤ 0, the function is
+// equivalent to g.Go, and enforces no limit.
+func (g *Group) Limit(n int) func(Task) *Group {
 	if n <= 0 {
 		return g.Go
 	}
