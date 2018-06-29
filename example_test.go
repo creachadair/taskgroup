@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"bitbucket.org/creachadair/taskgroup"
@@ -34,33 +33,26 @@ func ExampleGroup() {
 	// <done>
 }
 
-func ExampleGroup_StartN() {
-	var sum int32
-	g := taskgroup.New(nil).StartN(15, func(i int, report func(error)) {
-		atomic.AddInt32(&sum, int32(i+1))
-	})
-	g.Wait()
-	fmt.Print("sum = ", sum)
-	// Output: sum = 120
-}
-
 func ExampleTrigger() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	const badTask = 5
 	g := taskgroup.New(taskgroup.Trigger(cancel))
-	g.StartN(10, func(i int, report func(error)) {
-		if i == badTask {
-			report(fmt.Errorf("task %d failed", i))
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(10 * time.Second):
-			return
-		}
-	})
+	for i := 0; i < 10; i++ {
+		i := i
+		g.Go(func() error {
+			if i == badTask {
+				return fmt.Errorf("task %d failed", i)
+			}
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(10 * time.Second):
+				return nil
+			}
+		})
+	}
 
 	if err := g.Wait(); err == nil {
 		log.Fatal("I expected an error here")

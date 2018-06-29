@@ -10,8 +10,8 @@ import "sync"
 type Task func() error
 
 // A Group manages a collection of cooperating goroutines.  New tasks can be
-// added to the group via the Go and StartN methods.  The caller can wait for
-// the tasks to complete by calling the Wait method.
+// added to the group via the Go method.  The caller can wait for the tasks to
+// complete by calling the Wait method.
 //
 // The group collects any errors returned or reported by each task.  Errors can
 // also optionally be reported to a user-defined callback (see "New").  The
@@ -75,22 +75,6 @@ func (g *Group) init() {
 			}
 		}()
 	})
-}
-
-// StartN starts n separate goroutines running task in g.  Each instance of
-// task is called with a distinct ID 0 ≤ i < n.  Tasks report errors by calling
-// the report function.  StartN returns g to permit chaining.
-func (g *Group) StartN(n int, task func(i int, report func(error))) *Group {
-	g.wg.Add(n)
-	g.init()
-	for i := 0; i < n; i++ {
-		i := i
-		go func() {
-			defer g.wg.Done()
-			task(i, g.report)
-		}()
-	}
-	return g
 }
 
 // Wait blocks until all the goroutines currently active in the group have

@@ -53,16 +53,19 @@ func TestCancellation(t *testing.T) {
 	errOther := errors.New("something is wrong")
 	ctx, cancel := context.WithCancel(context.Background())
 	var numOK int32
-	g.StartN(numTasks, func(_ int, report func(error)) {
-		select {
-		case <-ctx.Done():
-			report(ctx.Err())
-		case <-randwait(1):
-			report(errOther)
-		case <-randwait(1):
-			atomic.AddInt32(&numOK, 1)
-		}
-	})
+	for i := 0; i < numTasks; i++ {
+		g.Go(func() error {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-randwait(1):
+				return errOther
+			case <-randwait(1):
+				atomic.AddInt32(&numOK, 1)
+				return nil
+			}
+		})
+	}
 	cancel()
 	g.Wait()
 	var numCanceled, numOther int
