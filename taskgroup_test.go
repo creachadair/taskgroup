@@ -1,14 +1,13 @@
 package taskgroup
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 const numTasks = 64
