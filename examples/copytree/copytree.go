@@ -8,6 +8,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"io"
 	"log"
@@ -16,7 +17,6 @@ import (
 	"strings"
 
 	"bitbucket.org/creachadair/taskgroup"
-	"golang.org/x/net/context"
 )
 
 var (
