@@ -107,20 +107,19 @@ func Trigger(f func()) ErrorFunc { return func(e error) error { f(); return e } 
 // unmodified.
 func Listen(f func(error)) ErrorFunc { return func(e error) error { f(e); return e } }
 
-// Limit returns a function that starts each task passed to it in g, allowing
-// no more than n tasks to be active concurrently.  If n ≤ 0, the function is
-// equivalent to g.Go, and enforces no limit.
-func (g *Group) Limit(n int) func(Task) *Group {
+// Limit returns g and a function that starts each task passed to it in g,
+// allowing no more than n tasks to be active concurrently.  If n ≤ 0, the
+// start function is equivalent to g.Go, which enforces no limit.
+func (g *Group) Limit(n int) (*Group, func(Task) *Group) {
 	if n <= 0 {
-		return g.Go
+		return g, g.Go
 	}
 	adm := make(chan struct{}, n)
-	return func(task Task) *Group {
-		g.Go(func() error {
+	return g, func(task Task) *Group {
+		return g.Go(func() error {
 			adm <- struct{}{}
 			defer func() { <-adm }()
 			return task()
 		})
-		return g
 	}
 }

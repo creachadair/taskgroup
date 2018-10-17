@@ -88,8 +88,7 @@ func TestCancellation(t *testing.T) {
 func TestCapacity(t *testing.T) {
 	const maxCapacity = 25
 	const numTasks = 1492
-	g := New(nil)
-	start := g.Limit(maxCapacity)
+	g, start := New(nil).Limit(maxCapacity)
 
 	var p peakValue
 	var n int32

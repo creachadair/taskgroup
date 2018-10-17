@@ -76,8 +76,7 @@ func ExampleListen() {
 func ExampleGroup_Limit() {
 	var p peakValue
 
-	g := taskgroup.New(nil)
-	start := g.Limit(4)
+	g, start := taskgroup.New(nil).Limit(4)
 	for i := 0; i < 100; i++ {
 		start(func() error {
 			p.inc()
