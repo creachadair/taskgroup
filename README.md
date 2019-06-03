@@ -43,8 +43,8 @@ func copyTree(source, target string) error {
 }
 ```
 
-But of course, it's not quite as easy as that, because how will you know when
-all the file copies are finished? That's easy: Use a `sync.WaitGroup`:
+Unfortunately, this isn't quite sufficient: How will we detect when all the
+file copies are finished? Typically we do this with a `sync.WaitGroup`:
 
 ```go
 var wg sync.WaitGroup
@@ -55,16 +55,15 @@ go func() {
     copyFile(adjusted, target)
 }()
 ...
-wg.Wait()
+wg.Wait() // blocks until all the tasks signal done
 ```
 
-Okay. Remember, though that copies might fail -- the disk might fill up, or
-there might be a permissions error, say. If you don't care, you might just log
-the error and continue, but often in case of error you'd like to back out and
-clean up your mess. But there's no way to capture the return value from the
-function inside the goroutine; you will have to pass it back over a channel,
-which means you now have to thread a channel in through the functions you
-invoke from the goroutine:
+In addition, we need to cope with errors: Copies might fail―the disk might fill
+up, or there might be a permissions error, say. For some applications we might
+be content to log the error and continue, but often in case of error you'd like
+to back out and clean up your mess. To do this, however, we need to capture the
+return value from the function inside the goroutine―and that will require us to
+plumb in another channel:
 
 ```go
 errs := make(chan error)
@@ -72,9 +71,8 @@ errs := make(chan error)
 go copyFile(adjusted, target, errs)
 ```
 
-And of course, you may get more than one error, so you will either need to
-buffer the channel (so the goroutines don't block trying to write to it), or
-have another goroutine to clear it out:
+Moreover, we may get more than one error, so we will need another goroutine to
+clear it out:
 
 ```go
 var failures []error
@@ -88,18 +86,18 @@ wg.Wait()
 close(errs)
 ```
 
-You're still not out of the woods, though, because how do you know when the
-error collector is finished? You'll need another channel or `sync.WaitGroup`)
-to signal for that:
+But now, how do we know when the error collector is finished so that we can
+safely examine the `failures`? We need another channel or `sync.WaitGroup` to
+signal for that:
 
 ```go
 var failures []error
 edone := make(chan struct{})
 go func() {
+    defer close(edone)
     for e := range errs {
         failures = append(failures, e)
 	}
-	close(edone)	
 }()
 ...
 wg.Wait()   // all the workers are done
@@ -107,22 +105,23 @@ close(errs) // signal the error collector to stop
 <-edone     // wait for the error collector to be done
 ```
 
-Okay, so that works. But for this scenario, you really don't want to wait
-around for all the copies to finish -- if any of the file copies fails, you
-want to stop what you're doing and give up.  To do that, you'll need to pass in
-another channel (say) to the workers, which you can close to signal
-cancellation:
-
-	cancel := make(chan struct{})
-	...
-	copyFile(adjusted, target, errs, cancel)
-
-then `copyFile` will have to check for that:
+That's tedious, but works. But now, in this example, if something fails we
+really don't want to wait around for all the copies to finish―if one of the
+file copies fails, we want to stop what you're doing and clean up.  So now we
+nee another channel or a context to signal cancellation:
 
 ```go
-func copyFile(source, target string, errs chan<- error, cancel <-chan struct{}) {
+	ctx, cancel := context.WithCancel(context.Background())
+	...
+	copyFile(ctx, adjusted, target, errs)
+```
+
+and then `copyFile` will have to check for that:
+
+```go
+func copyFile(ctx context.Context, source, target string, errs chan<- error) {
 	select {
-	case <-cancel:
+	case <-ctx.Done():
 		return
 	default:
 	 	// ... do the copy as normal, or propagate an error
@@ -130,26 +129,51 @@ func copyFile(source, target string, errs chan<- error, cancel <-chan struct{}) 
 }
 ```
 
-The lesson here is that, while Go's concurrency primitives are easily powerful
-enough to express these relationships, it can be tedious to wire them all
-together. The `taskgroup` package was created to help simplify some of the
-plumbing for the common case of a group of tasks that are all working on a
-related outcome (_e.g.,_ copying a directory structure), and where an error on
-the part of any _single_ task is grounds for terminating the work as a whole.
+Finally, the way this is set up right now there is no limit to the number of
+copies that can be concurrently in flight. Even if we have plenty of RAM, it is
+quite likely we may hit the limit of open file descriptors our process is
+allowed. Ideally, we should set some kind of bound on the active concurrency.
+We might use a [semaphore](https://godoc.org/golang.org/x/sync/semaphore) or
+a throttling channel:
 
-The `taskgroup` package supports some of the plumbing described above:
+```go
+throttle := make(chan struct{}, 64)  // allow up to 64 concurrent copies
+go func() {
+   throttle <- struct{}{} // block until the throttle has a free slot
+   defer func() { wg.Done(); <-throttle }()
+   copyFile(ctx, adjusted, target, errs)
+}()
+```
 
- - For cancellation, you can use the
-   [context](http://godoc.org/golang.org/x/net/context) package.  The
-   `taskgroup` package doesn't handle this piece.
+In case you've lost count, we're up to four channels (including the context).
 
- - The `*taskgroup.Group` value manages collecting `error` values from its
-   tasks, and delivers them to a user-provided callback. Invocations of the
-   callback are all done from a single goroutine, so it is safe to have the
-   callback manipulate local resources without a lock.
+The lesson here is that, while Go's concurrency primitives are more than
+powerful enough to express these relationships, it can be tedious to wire them
+all together.
 
-The API for the caller is straightforward: A task is expressed as a `func()
-error`, and is added to a group using the `Go` method,
+The `taskgroup` package exists to handle the plumbing for the common case of a
+group of tasks that are all working on a related outcome (_e.g.,_ copying a
+directory structure), and where an error on the part of any _single_ task may
+be grounds for terminating the work as a whole.
+
+The package provides a `taskgroup.Group` type that has built-in support for
+some of these concerns:
+
+- Limiting the number of active goroutines.
+- Collecting and filtering errors.
+- Waiting for completion and delivering status.
+
+A `taskgroup.Group` collects error values from each task and can deliver them
+to a user-provided callback. The callback can filter them or take other actions
+(such as cancellation). Invocations of the callback are all done from a single
+goroutine so it is safe to manipulate local resources without a lock.
+
+A group does not directly support cancellation, but integrates cleanly with the
+standard [context](https://godoc.org/context) package. A `context.CancelFunc`
+can be used as a trigger to signal the whole group when an error occurs.
+
+The API is straightforward: A task is expressed as a `func() error`, and is
+added to a group using the `Go` method,
 
 ```go
 g := taskgroup.New(nil).Go(myTask)
@@ -166,29 +190,33 @@ This blocks until all the tasks in the group have returned (either
 successfully, or with an error). `Wait` returns the first non-nil error
 returned by any of the worker tasks.
 
-A working program demonstrating this example can be found in the `cmd/copytree`
-subdirectory.
+An example program can be found in `examples/copytree/copytree.go`.
+
+## Filtering Errors
+
+The `taskgroup.New` function takes an optional callback that is invoked for
+each non-nil error reported by a task in the group. The callback may choose
+to propagate, replace, or discard the error. For example:
+
+```go
+g := taskgroup.New(func(err error) error {
+   if os.IsNotExist(err) {
+      return nil // ignore files that do not exist
+   }
+   return err
+})
+```
 
 ## Controlling Concurrency
 
-Although goroutines are inexpensive to start up, it is often useful to limit
-the number of _active_ goroutines in a program, to avoid various kinds of
-resource exhaustion (CPU, memory, in-flight RPCs, etc.).  Doing so often
-requires a bunch of additional plumbing to restrict when goroutines may be
-started or become active.
-
-The `Capacity` method limits the maximum number of goroutines that a group will
-have active concurrently.
-
-Adding this is simple:
+The `Limit` method of a supports limiting the number of concurrently _active_
+goroutines in the group. For example:
 
 ```go
-g := taskgroup.New(nil)
-
 // Allow at most 25 concurrently-active goroutines in the group.
-start := g.Capacity(25)
+g, start := taskgroup.New(nil).Limit(25)
 
-// Start tasks by calling the function returned by taskgroup.Capacity:
+// Start tasks by calling the function returned by taskgroup.Limit:
 start(task1)
 start(task2)
 // ...
