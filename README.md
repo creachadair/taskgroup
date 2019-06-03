@@ -9,7 +9,7 @@ New tasks can be added to the group at will, and the caller can wait until all
 tasks are complete. Errors are automatically collected and delivered to a
 user-provided callback in a single goroutine.  This does not replace the full
 generality of Go's built-in features, but it simplifies some of the plumbing
-for common concurrent tasks.
+for common concurrent tasks.  
 
 ## Rationale
 
