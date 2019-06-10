@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/creachadair/taskgroup"
+	"github.com/creachadair/taskgroup"
 )
 
 func ExampleGroup() {

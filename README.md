@@ -1,8 +1,8 @@
 # taskgroup
 
-http://godoc.org/bitbucket.org/creachadair/taskgroup
+http://godoc.org/github.com/creachadair/taskgroup
 
-[![Go Report Card](https://goreportcard.com/badge/bitbucket.org/creachadair/taskgroup)](https://goreportcard.com/report/bitbucket.org/creachadair/taskgroup)
+[![Go Report Card](https://goreportcard.com/badge/github.com/creachadair/taskgroup)](https://goreportcard.com/report/github.com/creachadair/taskgroup)
 
 A `*taskgroup.Group` represents a group of goroutines working on related tasks.
 New tasks can be added to the group at will, and the caller can wait until all
