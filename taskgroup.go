@@ -112,8 +112,8 @@ func (g *Group) Limit(n int) (*Group, func(Task) *Group) {
 	}
 	adm := make(chan struct{}, n)
 	return g, func(task Task) *Group {
+		adm <- struct{}{}
 		return g.Go(func() error {
-			adm <- struct{}{}
 			defer func() { <-adm }()
 			return task()
 		})
