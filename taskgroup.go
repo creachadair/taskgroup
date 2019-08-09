@@ -26,10 +26,13 @@ type Group struct {
 	err   error         // error returned from Wait
 }
 
-// New constructs a new, empty group.  Add tasks to the group using g.Go.  Wait
-// for the group to complete with g.Wait.  If ef != nil, it is called each time
-// a task reports an error.  The error returned by the ErrorFunc replaces the
-// task's error.
+// New constructs a new, empty group.  If ef != nil, it is called to filter
+// each error reported by a task running in the group.  The value returned by
+// ef replaces the task's error. A nil ef behaves as the identity function,
+// leaving all errors as reported.
+//
+// Calls to ef are issued by a single goroutine, so it is safe for ef to
+// manipulate local data structures without additional locking.
 func New(ef ErrorFunc) *Group {
 	if ef == nil {
 		ef = func(e error) error { return e }
@@ -37,7 +40,7 @@ func New(ef ErrorFunc) *Group {
 	return &Group{setup: new(sync.Once), onError: ef}
 }
 
-// Go adds a new task to the group, and returns g to permit chaining.
+// Go runs task in a new goroutine in g, and returns g to permit chaining.
 func (g *Group) Go(task Task) *Group {
 	g.wg.Add(1)
 	g.init()
