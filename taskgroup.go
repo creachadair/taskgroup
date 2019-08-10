@@ -66,10 +66,9 @@ func (g *Group) init() {
 		go func() {
 			defer close(g.edone)
 			for err := range errc {
-				if e := g.onError(err); e != nil {
-					if g.err == nil {
-						g.err = e // capture the first error always
-					}
+				e := g.onError(err)
+				if e != nil && g.err == nil {
+					g.err = e // capture the first error always
 				}
 			}
 		}()
