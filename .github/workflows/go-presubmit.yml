@@ -1,0 +1,42 @@
+name: Go presubmit
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  build:
+    name: Presubmit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.12', '1.13', '1.14']
+    steps:
+    - name: Install Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+      id: go
+    - name: Install staticcheck
+      env:
+        GO111MODULE: on
+        GOPROXY: https://proxy.golang.org
+      run: |
+        go get honnef.co/go/tools/cmd/staticcheck@2020.1.5
+
+    - uses: actions/checkout@v2
+
+    - name: Verify source format
+      run: |
+        /bin/sh -s -- gofmt -l -s ./...
+    - name: Fetch module dependencies
+      run: |
+        go mod download
+    - name: Run unit tests
+      run: go test -race -cpu=1,2 ./...
+    - name: Run staticcheck
+      run: |
+        ~/go/bin/staticcheck ./...
