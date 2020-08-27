@@ -1,7 +1,6 @@
 # taskgroup
 
-http://godoc.org/github.com/creachadair/taskgroup
-
+[![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://pkg.go.dev/github.com/creachadair/taskgroup)
 [![Go Report Card](https://goreportcard.com/badge/github.com/creachadair/taskgroup)](https://goreportcard.com/report/github.com/creachadair/taskgroup)
 
 A `*taskgroup.Group` represents a group of goroutines working on related tasks.
