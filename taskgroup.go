@@ -1,17 +1,18 @@
-// Package taskgroup manages a collection of cooperating goroutines.  It
-// simplifies common concerns of waiting for goroutine termination and
-// collecting errors.
+// Package taskgroup manages collections of cooperating goroutines.
+// It defines a Group that handles waiting for goroutine termination and the
+// propagation of error values. The caller may provide a callback to filter
+// and responde to task errors.
 package taskgroup
 
 import "sync"
 
-// A Task is a function that performs some arbitrary task and returns an error
-// value, and is the basic unit of work in a Group.
+// A Task function is the basic unit of work in a Group. Errors reported by
+// tasks are collected and reported by the group.
 type Task func() error
 
-// A Group manages a collection of cooperating goroutines.  New tasks can be
-// added to the group via the Go method.  The caller can wait for the tasks to
-// complete by calling the Wait method.
+// A Group manages a collection of cooperating goroutines.  New tasks are added
+// to the group with the Go method.  Call the Wait method to wait for the tasks
+// to complete.
 //
 // The group collects any errors returned by the tasks in the group. The first
 // non-nil error reported by any task (and not otherwise filtered) is returned
@@ -26,10 +27,9 @@ type Group struct {
 	err   error         // error returned from Wait
 }
 
-// New constructs a new, empty group.  If ef != nil, it is called to filter
-// each error reported by a task running in the group.  The value returned by
-// ef replaces the task's error. A nil ef behaves as the identity function,
-// leaving all errors as reported.
+// New constructs a new empty group.  If ef != nil, it is called for each error
+// reported by a task running in the group.  The value returned by ef replaces
+// the task's error. If ef == nil, errors are not filtered.
 //
 // Calls to ef are issued by a single goroutine, so it is safe for ef to
 // manipulate local data structures without additional locking.
@@ -97,12 +97,12 @@ func (g *Group) Wait() error {
 // suppress errors by modifying or discarding the input error.
 type ErrorFunc func(error) error
 
-// Trigger adapts f to an ErrorFunc. The resulting function returns task errors
-// unmodified.
+// Trigger creates an ErrorFunc that calls f each time a task reports an error.
+// The resulting ErrorFunc returns task errors unmodified.
 func Trigger(f func()) ErrorFunc { return func(e error) error { f(); return e } }
 
-// Listen adapts f to an ErrorFunc. The resulting function returns task errors
-// unmodified.
+// Listen creates an ErrorFunc that reports each non-nil task error to f.  The
+// resulting ErrorFunc returns task errors unmodified.
 func Listen(f func(error)) ErrorFunc { return func(e error) error { f(e); return e } }
 
 // Limit returns g and a function that starts each task passed to it in g,

@@ -38,7 +38,10 @@ func ExampleTrigger() {
 	defer cancel()
 
 	const badTask = 5
+
+	// Construct a group in which any task error cancels the context.
 	g := taskgroup.New(taskgroup.Trigger(cancel))
+
 	for i := 0; i < 10; i++ {
 		i := i
 		g.Go(func() error {
