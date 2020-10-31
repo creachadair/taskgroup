@@ -107,7 +107,7 @@ close(errs) // signal the error collector to stop
 That's tedious, but works. But now, in this example, if something fails we
 really don't want to wait around for all the copies to finish―if one of the
 file copies fails, we want to stop what you're doing and clean up.  So now we
-nee another channel or a context to signal cancellation:
+need another channel or a context to signal cancellation:
 
 ```go
 	ctx, cancel := context.WithCancel(context.Background())
