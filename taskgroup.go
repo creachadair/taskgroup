@@ -1,7 +1,7 @@
 // Package taskgroup manages collections of cooperating goroutines.
 // It defines a Group that handles waiting for goroutine termination and the
 // propagation of error values. The caller may provide a callback to filter
-// and responde to task errors.
+// and respond to task errors.
 package taskgroup
 
 import "sync"
