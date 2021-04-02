@@ -208,7 +208,7 @@ g := taskgroup.New(func(err error) error {
 
 ## Controlling Concurrency
 
-The `Limit` method of a supports limiting the number of concurrently _active_
+The `Limit` method supports limiting the number of concurrently _active_
 goroutines in the group. For example:
 
 ```go
