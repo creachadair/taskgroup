@@ -14,14 +14,12 @@ import (
 
 const numTasks = 64
 
-// randwait sleeps for a random time of up to n milliseconds.
-func randwait(n int) <-chan time.Time {
-	return time.After(time.Duration(rand.Intn(n)) * time.Millisecond)
-}
+// randms returns a random duration of up to n milliseconds.
+func randms(n int) time.Duration { return time.Duration(rand.Intn(n)) * time.Millisecond }
 
 // busyWork returns a Task that does nothing for n ms and returns err.
 func busyWork(n int, err error) taskgroup.Task {
-	return func() error { <-randwait(n); return err }
+	return func() error { time.Sleep(randms(n)); return err }
 }
 
 func TestBasic(t *testing.T) {
@@ -61,9 +59,9 @@ func TestCancellation(t *testing.T) {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-randwait(1):
+			case <-time.After(randms(1)):
 				return errOther
-			case <-randwait(1):
+			case <-time.After(randms(1)):
 				atomic.AddInt32(&numOK, 1)
 				return nil
 			}
