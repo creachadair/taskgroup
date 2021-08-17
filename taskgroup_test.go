@@ -1,4 +1,4 @@
-package taskgroup
+package taskgroup_test
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/creachadair/taskgroup"
 )
 
 const numTasks = 64
@@ -18,11 +20,13 @@ func randwait(n int) <-chan time.Time {
 }
 
 // busyWork returns a Task that does nothing for n ms and returns err.
-func busyWork(n int, err error) Task { return func() error { <-randwait(n); return err } }
+func busyWork(n int, err error) taskgroup.Task {
+	return func() error { <-randwait(n); return err }
+}
 
 func TestBasic(t *testing.T) {
 	// Verify that the group works at all.
-	g := New(nil).Go(busyWork(25, nil))
+	g := taskgroup.New(nil).Go(busyWork(25, nil))
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected task error: %v", err)
 	}
@@ -37,7 +41,7 @@ func TestBasic(t *testing.T) {
 
 func TestErrorPropagation(t *testing.T) {
 	var errBogus = errors.New("bogus")
-	g := New(nil).Go(func() error { return errBogus })
+	g := taskgroup.New(nil).Go(func() error { return errBogus })
 	if err := g.Wait(); err != errBogus {
 		t.Errorf("Wait: got error %v, wanted %v", err, errBogus)
 	}
@@ -45,7 +49,7 @@ func TestErrorPropagation(t *testing.T) {
 
 func TestCancellation(t *testing.T) {
 	var errs []error
-	g := New(Listen(func(err error) {
+	g := taskgroup.New(taskgroup.Listen(func(err error) {
 		errs = append(errs, err)
 	}))
 
@@ -88,7 +92,7 @@ func TestCancellation(t *testing.T) {
 func TestCapacity(t *testing.T) {
 	const maxCapacity = 25
 	const numTasks = 1492
-	g, start := New(nil).Limit(maxCapacity)
+	g, start := taskgroup.New(nil).Limit(maxCapacity)
 
 	var p peakValue
 	var n int32

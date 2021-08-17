@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/creachadair/taskgroup"
@@ -92,24 +91,4 @@ func ExampleGroup_Limit() {
 	fmt.Printf("Max active ≤ 4: %v\n", p.max <= 4)
 	// Output:
 	// Max active ≤ 4: true
-}
-
-type peakValue struct {
-	μ        sync.Mutex
-	cur, max int
-}
-
-func (p *peakValue) inc() {
-	p.μ.Lock()
-	p.cur++
-	if p.cur > p.max {
-		p.max = p.cur
-	}
-	p.μ.Unlock()
-}
-
-func (p *peakValue) dec() {
-	p.μ.Lock()
-	p.cur--
-	p.μ.Unlock()
 }
