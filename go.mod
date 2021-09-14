@@ -1,3 +1,3 @@
 module github.com/creachadair/taskgroup
 
-go 1.12
+go 1.17
