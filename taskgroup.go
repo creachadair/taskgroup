@@ -108,6 +108,11 @@ func Listen(f func(error)) ErrorFunc { return func(e error) error { f(e); return
 // Limit returns g and a function that starts each task passed to it in g,
 // allowing no more than n tasks to be active concurrently.  If n ≤ 0, the
 // start function is equivalent to g.Go, which enforces no limit.
+//
+// The limiting mechanism is optional, and the underlying group is not
+// restricted. A call to the start function will block until a slot is
+// available, but calling g.Go directly will add a task unconditionally and
+// will not take up a limiter slot.
 func (g *Group) Limit(n int) (*Group, func(Task) *Group) {
 	if n <= 0 {
 		return g, g.Go
