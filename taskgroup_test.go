@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/creachadair/taskgroup"
+	"github.com/fortytw2/leaktest"
 )
 
 const numTasks = 64
@@ -23,6 +24,8 @@ func busyWork(n int, err error) taskgroup.Task {
 }
 
 func TestBasic(t *testing.T) {
+	defer leaktest.Check(t)
+
 	// Verify that the group works at all.
 	g := taskgroup.New(nil).Go(busyWork(25, nil))
 	if err := g.Wait(); err != nil {
@@ -38,6 +41,8 @@ func TestBasic(t *testing.T) {
 }
 
 func TestErrorPropagation(t *testing.T) {
+	defer leaktest.Check(t)
+
 	var errBogus = errors.New("bogus")
 	g := taskgroup.New(nil).Go(func() error { return errBogus })
 	if err := g.Wait(); err != errBogus {
@@ -46,6 +51,8 @@ func TestErrorPropagation(t *testing.T) {
 }
 
 func TestCancellation(t *testing.T) {
+	defer leaktest.Check(t)
+
 	var errs []error
 	g := taskgroup.New(taskgroup.Listen(func(err error) {
 		errs = append(errs, err)
@@ -88,6 +95,8 @@ func TestCancellation(t *testing.T) {
 }
 
 func TestCapacity(t *testing.T) {
+	defer leaktest.Check(t)
+
 	const maxCapacity = 25
 	const numTasks = 1492
 	g, start := taskgroup.New(nil).Limit(maxCapacity)
