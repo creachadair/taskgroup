@@ -49,7 +49,7 @@ func ExampleTrigger() {
 			}
 			select {
 			case <-ctx.Done():
-				return nil
+				return ctx.Err()
 			case <-time.After(10 * time.Second):
 				return nil
 			}
