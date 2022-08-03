@@ -3,8 +3,8 @@
 // of files from one directory to another.
 //
 // Usage:
-//    copytree -from /path/to/source -to /path/to/target
 //
+//	copytree -from /path/to/source -to /path/to/target
 package main
 
 import (
