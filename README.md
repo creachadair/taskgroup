@@ -21,10 +21,10 @@ library's [sync](http://godoc.org/sync) package. In some common situations,
 however, managing goroutine lifetimes can become unwieldy using only what is
 built in.
 
-For example, consider the case of copying a large directory tree: Walk throught
-the source directory recursively, creating the parallel target directory
-structure and spinning up a goroutine to copy each of the files
-concurrently. This part is simple:
+For example, consider the case of copying a large directory tree: Walk through
+the source directory recursively, creating a parallel target directory
+structure and starting a goroutine to copy each of the files concurrently.
+That much is conceptually simple:
 
 ```go
 func copyTree(source, target string) error {
@@ -43,8 +43,8 @@ func copyTree(source, target string) error {
 }
 ```
 
-Unfortunately, this isn't quite sufficient: How will we detect when all the
-file copies are finished? Typically we do this with a `sync.WaitGroup`:
+Unfortunately, it isn't quite sufficient: How will we detect when all the
+file copies are finished? Typically we will use a `sync.WaitGroup`:
 
 ```go
 var wg sync.WaitGroup
@@ -58,12 +58,12 @@ go func() {
 wg.Wait() // blocks until all the tasks signal done
 ```
 
-In addition, we need to cope with errors: Copies might fail―the disk might fill
-up, or there might be a permissions error, say. For some applications we might
-be content to log the error and continue, but often in case of error you'd like
-to back out and clean up your mess. To do this, however, we need to capture the
-return value from the function inside the goroutine―and that will require us to
-plumb in another channel:
+In addition, we need to cope with errors: Copies might fail (the disk might fill
+up, or there might be a permissions error, say). For some applications it might
+suffice to log the error and continue, but often in case of error you'd like
+to back out and clean up your mess. To do this, we need to capture the return
+value from the function inside the goroutine―and that will require us either to
+add a lock or plumb in another channel:
 
 ```go
 errs := make(chan error)
@@ -71,8 +71,8 @@ errs := make(chan error)
 go copyFile(adjusted, target, errs)
 ```
 
-Moreover, we may get more than one error, so we will need another goroutine to
-clear it out:
+Since multiple copies can be running in parallel, we will also need another
+goroutine to drain the errors channel and accumulate the results somewhere:
 
 ```go
 var failures []error
@@ -86,9 +86,9 @@ wg.Wait()
 close(errs)
 ```
 
-But now, how do we know when the error collector is finished so that we can
-safely examine the `failures`? We need another channel or `sync.WaitGroup` to
-signal for that:
+But now we need to also detect when the error collector is finished, so that
+we can examine the `failures` without a data race. We'll need another channel
+or wait group to signal for this:
 
 ```go
 var failures []error
@@ -105,13 +105,14 @@ close(errs) // signal the error collector to stop
 <-edone     // wait for the error collector to be done
 ```
 
-That's tedious, but works. But now, in this example, if something fails we
+All of this is tedious, but works fine. Now, however, if something fails we
 really don't want to wait around for all the copies to finish―if one of the
 file copies fails, we want to stop what you're doing and clean up.  So now we
-need another channel or a context to signal cancellation:
+need a way to signal cancellation, such as a `context.Context`:
 
 ```go
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	...
 	copyFile(ctx, adjusted, target, errs)
 ```
@@ -120,20 +121,17 @@ and then `copyFile` will have to check for that:
 
 ```go
 func copyFile(ctx context.Context, source, target string, errs chan<- error) {
-	select {
-	case <-ctx.Done():
+	if ctx.Err() != nil {
 		return
-	default:
-	 	// ... do the copy as normal, or propagate an error
 	}
+ 	// ... do the copy as normal, or propagate an error
 }
 ```
 
-Finally, the way this is set up right now there is no limit to the number of
-copies that can be concurrently in flight. Even if we have plenty of RAM, it is
-quite likely we may hit the limit of open file descriptors our process is
-allowed. Ideally, we should set some kind of bound on the active concurrency.
-We might use a [semaphore](https://godoc.org/golang.org/x/sync/semaphore) or
+Finally, we need some way to limit the number of concurrent copies. Even if the
+host has plenty of memory and CPU, unbounded concurrency is likely to run us out of
+file descriptors. As a rule of thumb, unbounded concurrency is almost always a poor
+choice. We might use a [semaphore](https://godoc.org/golang.org/x/sync/semaphore) or
 a throttling channel:
 
 ```go
@@ -147,7 +145,7 @@ go func() {
 
 In case you've lost count, we're up to four channels (including the context).
 
-The lesson here is that, while Go's concurrency primitives are more than
+The point here is that, while Go's concurrency primitives are more than
 powerful enough to express these relationships, it can be tedious to wire them
 all together.
 
