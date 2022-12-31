@@ -13,9 +13,7 @@ type Solo struct {
 func Single(task Task) *Solo {
 	// N.B. This is closed by Wait.
 	errc := make(chan error, 1)
-	go func() {
-		errc <- task()
-	}()
+	go func() { errc <- task() }()
 
 	return &Solo{errc: errc}
 }
