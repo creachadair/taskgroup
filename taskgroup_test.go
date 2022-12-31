@@ -24,7 +24,7 @@ func busyWork(n int, err error) taskgroup.Task {
 }
 
 func TestBasic(t *testing.T) {
-	defer leaktest.Check(t)
+	defer leaktest.Check(t)()
 
 	// Verify that the group works at all.
 	g := taskgroup.New(nil).Go(busyWork(25, nil))
@@ -41,7 +41,7 @@ func TestBasic(t *testing.T) {
 }
 
 func TestErrorPropagation(t *testing.T) {
-	defer leaktest.Check(t)
+	defer leaktest.Check(t)()
 
 	var errBogus = errors.New("bogus")
 	g := taskgroup.New(nil).Go(func() error { return errBogus })
@@ -51,7 +51,7 @@ func TestErrorPropagation(t *testing.T) {
 }
 
 func TestCancellation(t *testing.T) {
-	defer leaktest.Check(t)
+	defer leaktest.Check(t)()
 
 	var errs []error
 	g := taskgroup.New(taskgroup.Listen(func(err error) {
@@ -95,7 +95,7 @@ func TestCancellation(t *testing.T) {
 }
 
 func TestCapacity(t *testing.T) {
-	defer leaktest.Check(t)
+	defer leaktest.Check(t)()
 
 	const maxCapacity = 25
 	const numTasks = 1492
