@@ -223,7 +223,7 @@ start(task2)
 ## Solo Tasks
 
 In some cases it is useful to have a solo background task to handle a separate
-concern, for example collecting the results from a batch of concurrent workers.
+concern, such as collecting the results from a batch of concurrent workers.
 
 For example, suppose we have a group of concurrent tasks processing a search
 task, and we want to aggregate the results.  We can't do this from the same
