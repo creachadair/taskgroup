@@ -219,3 +219,45 @@ start(task1)
 start(task2)
 // ...
 ```
+
+## Solo Tasks
+
+In some cases it is useful to have a solo background task to handle a separate
+concern, such as collecting the results from a batch of concurrent workers.
+
+For example, suppose we have a group of tasks processing a complex search, and
+we want to aggregate the results.  We can't do this from the same group that
+the workers are using, since it needs to run until they have all completed.  On
+the other hand, creating two full groups is overkill, since we only need one
+additional goroutine.
+
+To handle such cases, the `Single` constructor is helpful: It manages a single
+background goroutine with a separate wait:
+
+```go
+var total int
+results := make(chan int)
+s := taskgroup.Single(func() error {
+    for v := range results {
+        total += v
+    }
+})
+
+g := taskgroup.New(nil)
+for i := 0; i < numTasks; i++ {
+    batch := newBatch(i)
+    g.Go(func() error {
+        return search(batch)
+    })
+}
+
+// Wait for the workers to finish.
+g.Wait()
+
+// Signal the collector to stop, and wait for it to do so.
+close(results)
+s.Wait()
+
+// Now it is safe to use the results.
+fmt.Println(total)
+```

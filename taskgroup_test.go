@@ -121,6 +121,30 @@ func TestCapacity(t *testing.T) {
 	}
 }
 
+func TestSingleTask(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	sentinel := errors.New("expected value")
+	release := make(chan error)
+
+	s := taskgroup.Single(func() error {
+		return <-release
+	})
+
+	g := taskgroup.New(nil).Go(func() error {
+		if err := s.Wait(); err != sentinel {
+			t.Errorf("Background Wait: got %v, want %v", err, sentinel)
+		}
+		return nil
+	})
+
+	release <- sentinel
+	if err := s.Wait(); err != sentinel {
+		t.Errorf("Foreground Wait: got %v, want %v", err, sentinel)
+	}
+	g.Wait()
+}
+
 type peakValue struct {
 	μ        sync.Mutex
 	cur, max int

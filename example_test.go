@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/creachadair/taskgroup"
@@ -91,4 +92,61 @@ func ExampleGroup_Limit() {
 	fmt.Printf("Max active ≤ 4: %v\n", p.max <= 4)
 	// Output:
 	// Max active ≤ 4: true
+}
+
+func shuffled(n int) []int {
+	rand.Seed(1)
+
+	vs := make([]int, n)
+	for i := range vs {
+		vs[i] = i + 1
+	}
+	for i := n - 1; i > 0; i-- {
+		p := rand.Intn(i + 1)
+		vs[i], vs[p] = vs[p], vs[i]
+	}
+	return vs
+}
+
+func ExampleSolo() {
+	var total int
+	results := make(chan int)
+
+	// Start a task to collect the results of a "search" process.
+	s := taskgroup.Single(func() error {
+		for v := range results {
+			total += v
+		}
+		return nil
+	})
+
+	const numTasks = 25
+	input := shuffled(500)
+
+	// Start a bunch of tasks to find elements in the input...
+	g := taskgroup.New(nil)
+	for i := 0; i < numTasks; i++ {
+		target := i + 1
+		g.Go(func() error {
+			for i, v := range input {
+				if v == target {
+					results <- i
+					break
+				}
+			}
+			return nil
+		})
+	}
+
+	// Wait for the searchers to finish.
+	g.Wait()
+
+	// Signal the collector to stop, and wait for it to do so.
+	close(results)
+	s.Wait()
+
+	// Now it is safe to use the results.
+	fmt.Println(total)
+	// Output:
+	// 5972
 }
