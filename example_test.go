@@ -102,7 +102,7 @@ func shuffled(n int) []int {
 		vs[i] = i + 1
 	}
 	for i := n - 1; i > 0; i-- {
-		p := rand.Intn(i)
+		p := rand.Intn(i + 1)
 		vs[i], vs[p] = vs[p], vs[i]
 	}
 	return vs
@@ -148,5 +148,5 @@ func ExampleSolo() {
 	// Now it is safe to use the results.
 	fmt.Println(total)
 	// Output:
-	// 7341
+	// 5972
 }
