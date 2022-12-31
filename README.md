@@ -227,8 +227,8 @@ concern, such as collecting the results from a batch of concurrent workers.
 
 For example, suppose we have a group of tasks processing a complex search, and
 we want to aggregate the results.  We can't do this from the same group that
-the workers are using, since it needs run until they have all completed. On the
-other hand, creating two full groups is overkill, since we only need one
+the workers are using, since it needs to run until they have all completed.  On
+the other hand, creating two full groups is overkill, since we only need one
 additional goroutine.
 
 To handle such cases, the `Solo` type is helpful:
