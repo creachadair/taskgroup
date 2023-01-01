@@ -38,7 +38,7 @@ func New(ef ErrorFunc) *Group {
 	if ef == nil {
 		ef = func(e error) error { return e }
 	}
-	return &Group{setup: new(sync.Once), onError: ef}
+	return &Group{setup: new(sync.Once), reset: new(sync.Once), onError: ef}
 }
 
 // Go runs task in a new goroutine in g, and returns g to permit chaining.
@@ -80,6 +80,9 @@ func (g *Group) init() {
 
 func (g *Group) cleanup() {
 	g.reset.Do(func() {
+		if g.errc == nil {
+			return
+		}
 		close(g.errc)
 		<-g.edone
 		g.errc = nil

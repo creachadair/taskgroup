@@ -137,6 +137,15 @@ func TestRegression(t *testing.T) {
 		close(ready)
 		wg.Wait()
 	})
+	t.Run("WaitUnstarted", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x != nil {
+				t.Errorf("Unexpected panic: %v", x)
+			}
+		}()
+		g := taskgroup.New(nil)
+		g.Wait()
+	})
 }
 
 func TestSingleTask(t *testing.T) {
