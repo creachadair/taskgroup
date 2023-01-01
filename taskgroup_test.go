@@ -121,6 +121,24 @@ func TestCapacity(t *testing.T) {
 	}
 }
 
+func TestRegression(t *testing.T) {
+	t.Run("WaitRace", func(t *testing.T) {
+		ready := make(chan struct{})
+		g := taskgroup.New(nil).Go(func() error {
+			<-ready
+			return nil
+		})
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() { defer wg.Done(); g.Wait() }()
+		go func() { defer wg.Done(); g.Wait() }()
+
+		close(ready)
+		wg.Wait()
+	})
+}
+
 func TestSingleTask(t *testing.T) {
 	defer leaktest.Check(t)()
 
