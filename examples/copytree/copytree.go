@@ -40,28 +40,27 @@ func main() {
 	g, start := taskgroup.New(taskgroup.Trigger(cancel)).Limit(*maxWorkers)
 
 	err := filepath.Walk(*srcPath, func(path string, fi os.FileInfo, err error) error {
-		if err == nil {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-			}
-			target := adjustPath(path)
-			if fi.IsDir() {
-				return os.MkdirAll(target, fi.Mode())
-			} else if fi.Mode()&os.ModeType == os.ModeSymlink {
-				start(func() error {
-					log.Printf("Relinking %q", path)
-					return copyLink(ctx, path, target)
-				})
-			} else {
-				start(func() error {
-					log.Printf("Copying %q", path)
-					return copyFile(ctx, path, target)
-				})
-			}
+		if err != nil {
+			return err
+		} else if err := ctx.Err(); err != nil {
+			return err
 		}
-		return err
+
+		target := adjustPath(path)
+		if fi.IsDir() {
+			return os.MkdirAll(target, fi.Mode())
+		} else if fi.Mode()&os.ModeType == os.ModeSymlink {
+			start(func() error {
+				log.Printf("Relinking %q", path)
+				return copyLink(ctx, path, target)
+			})
+		} else {
+			start(func() error {
+				log.Printf("Copying %q", path)
+				return copyFile(ctx, path, target)
+			})
+		}
+		return nil
 	})
 	if err != nil {
 		log.Printf("Error traversing directory: %v", err)
@@ -85,10 +84,8 @@ func adjustPath(path string) string {
 
 // copyFile copies a plain file from source to target.
 func copyFile(ctx context.Context, source, target string) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	in, err := os.Open(source)
 	if err != nil {
