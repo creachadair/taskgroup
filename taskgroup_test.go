@@ -154,7 +154,7 @@ func TestSingleTask(t *testing.T) {
 	sentinel := errors.New("expected value")
 	release := make(chan error)
 
-	s := taskgroup.Single(func() error {
+	s := taskgroup.Go(func() error {
 		return <-release
 	})
 

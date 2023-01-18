@@ -108,12 +108,12 @@ func shuffled(n int) []int {
 	return vs
 }
 
-func ExampleSolo() {
+func ExampleSingle() {
 	var total int
 	results := make(chan int)
 
 	// Start a task to collect the results of a "search" process.
-	s := taskgroup.Single(func() error {
+	s := taskgroup.Go(func() error {
 		for v := range results {
 			total += v
 		}
