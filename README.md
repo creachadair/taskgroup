@@ -231,13 +231,13 @@ the workers are using, since it needs to run until they have all completed.  On
 the other hand, creating two full groups is overkill, since we only need one
 additional goroutine.
 
-To handle such cases, the `Single` constructor is helpful: It manages a single
+To handle such cases, the `Go` constructor is helpful: It manages a single
 background goroutine with a separate wait:
 
 ```go
 var total int
 results := make(chan int)
-s := taskgroup.Single(func() error {
+s := taskgroup.Go(func() error {
     for v := range results {
         total += v
     }
