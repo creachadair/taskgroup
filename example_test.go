@@ -95,8 +95,6 @@ func ExampleGroup_Limit() {
 }
 
 func shuffled(n int) []int {
-	rand.Seed(1)
-
 	vs := make([]int, n)
 	for i := range vs {
 		vs[i] = i + 1
@@ -128,9 +126,9 @@ func ExampleSingle() {
 	for i := 0; i < numTasks; i++ {
 		target := i + 1
 		g.Go(func() error {
-			for i, v := range input {
+			for _, v := range input {
 				if v == target {
-					results <- i
+					results <- v
 					break
 				}
 			}
@@ -148,5 +146,5 @@ func ExampleSingle() {
 	// Now it is safe to use the results.
 	fmt.Println(total)
 	// Output:
-	// 5972
+	// 325
 }
