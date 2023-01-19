@@ -80,6 +80,7 @@ func (g *Group) init() {
 
 func (g *Group) cleanup() {
 	g.reset.Do(func() {
+		g.wg.Wait()
 		if g.errc == nil {
 			return
 		}
@@ -96,7 +97,7 @@ func (g *Group) cleanup() {
 // group and not filtered by an ErrorFunc.
 //
 // After a call to Wait returns, the group is ready for reuse.
-func (g *Group) Wait() error { g.wg.Wait(); g.cleanup(); return g.err }
+func (g *Group) Wait() error { g.cleanup(); return g.err }
 
 // An ErrorFunc is called by a group each time a task reports an error.  Its
 // return value replaces the reported error, so the ErrorFunc can filter or
