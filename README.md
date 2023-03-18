@@ -97,7 +97,7 @@ go func() {
     defer close(edone)
     for e := range errs {
         failures = append(failures, e)
-	}
+    }
 }()
 ...
 wg.Wait()   // all the workers are done
@@ -241,6 +241,7 @@ s := taskgroup.Go(func() error {
     for v := range results {
         total += v
     }
+    return nil
 })
 
 g := taskgroup.New(nil)
