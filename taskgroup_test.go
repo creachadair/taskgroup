@@ -158,12 +158,11 @@ func TestSingleTask(t *testing.T) {
 		return <-release
 	})
 
-	g := taskgroup.New(nil).Go(func() error {
+	g := taskgroup.New(nil).Go(taskgroup.NoError(func() {
 		if err := s.Wait(); err != sentinel {
 			t.Errorf("Background Wait: got %v, want %v", err, sentinel)
 		}
-		return nil
-	})
+	}))
 
 	release <- sentinel
 	if err := s.Wait(); err != sentinel {

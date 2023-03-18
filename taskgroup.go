@@ -112,6 +112,9 @@ func Trigger(f func()) ErrorFunc { return func(e error) error { f(); return e } 
 // resulting ErrorFunc returns task errors unmodified.
 func Listen(f func(error)) ErrorFunc { return func(e error) error { f(e); return e } }
 
+// NoError adapts f to a Task that executes f and reports a nil error.
+func NoError(f func()) Task { return func() error { f(); return nil } }
+
 // Limit returns g and a function that starts each task passed to it in g,
 // allowing no more than n tasks to be active concurrently.  If n ≤ 0, the
 // start function is equivalent to g.Go, which enforces no limit.
