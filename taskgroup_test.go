@@ -152,23 +152,43 @@ func TestSingleTask(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	sentinel := errors.New("expected value")
-	release := make(chan error)
 
-	s := taskgroup.Go(func() error {
-		return <-release
+	t.Run("Early", func(t *testing.T) {
+		release := make(chan struct{})
+
+		s := taskgroup.Go(func() error {
+			defer close(release)
+			return sentinel
+		})
+
+		select {
+		case <-release:
+			if err := s.Wait(); err != sentinel {
+				t.Errorf("Wait: got %v, want %v", err, sentinel)
+			}
+		case <-time.After(1 * time.Second):
+			t.Fatal("Timed out waiting for task to finish")
+		}
 	})
 
-	g := taskgroup.New(nil).Go(taskgroup.NoError(func() {
-		if err := s.Wait(); err != sentinel {
-			t.Errorf("Background Wait: got %v, want %v", err, sentinel)
-		}
-	}))
+	t.Run("Late", func(t *testing.T) {
+		release := make(chan error, 1)
+		s := taskgroup.Go(func() error {
+			return <-release
+		})
 
-	release <- sentinel
-	if err := s.Wait(); err != sentinel {
-		t.Errorf("Foreground Wait: got %v, want %v", err, sentinel)
-	}
-	g.Wait()
+		g := taskgroup.New(nil).Go(taskgroup.NoError(func() {
+			if err := s.Wait(); err != sentinel {
+				t.Errorf("Background Wait: got %v, want %v", err, sentinel)
+			}
+		}))
+
+		release <- sentinel
+		if err := s.Wait(); err != sentinel {
+			t.Errorf("Foreground Wait: got %v, want %v", err, sentinel)
+		}
+		g.Wait()
+	})
 }
 
 func TestSingleResult(t *testing.T) {
