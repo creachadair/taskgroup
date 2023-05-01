@@ -171,6 +171,26 @@ func TestSingleTask(t *testing.T) {
 	g.Wait()
 }
 
+func TestSingleResult(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	release := make(chan struct{})
+
+	s := taskgroup.Call(func() (int, error) {
+		<-release
+		return 25, nil
+	})
+	time.AfterFunc(2*time.Millisecond, func() { close(release) })
+
+	res := s.Wait()
+	if res.Err != nil {
+		t.Errorf("Unexpected error: %v", res.Err)
+	}
+	if res.Value != 25 {
+		t.Errorf("Result: got %v, want 25", res.Value)
+	}
+}
+
 type peakValue struct {
 	μ        sync.Mutex
 	cur, max int
