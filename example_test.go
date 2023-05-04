@@ -99,10 +99,9 @@ func shuffled(n int) []int {
 	for i := range vs {
 		vs[i] = i + 1
 	}
-	for i := n - 1; i > 0; i-- {
-		p := rand.Intn(i + 1)
-		vs[i], vs[p] = vs[p], vs[i]
-	}
+	rand.Shuffle(n, func(i, j int) {
+		vs[i], vs[j] = vs[j], vs[i]
+	})
 	return vs
 }
 
