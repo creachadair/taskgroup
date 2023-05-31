@@ -47,3 +47,12 @@ type Result[T any] struct {
 	Value T
 	Err   error
 }
+
+// Get returns the fields of r as results. It is a convenience method for
+// unpacking the results of a Call.
+//
+// Typical usage:
+//
+//	s := taskgroup.Call(func() (int, error) { ... })
+//	v, err := s.Wait().Get()
+func (r Result[T]) Get() (T, error) { return r.Value, r.Err }

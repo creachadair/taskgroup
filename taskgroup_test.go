@@ -202,12 +202,12 @@ func TestSingleResult(t *testing.T) {
 	})
 	time.AfterFunc(2*time.Millisecond, func() { close(release) })
 
-	res := s.Wait()
-	if res.Err != nil {
-		t.Errorf("Unexpected error: %v", res.Err)
+	res, err := s.Wait().Get()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
 	}
-	if res.Value != 25 {
-		t.Errorf("Result: got %v, want 25", res.Value)
+	if res != 25 {
+		t.Errorf("Result: got %v, want 25", res)
 	}
 }
 
