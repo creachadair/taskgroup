@@ -22,24 +22,21 @@ func (s *Single[T]) Wait() T {
 
 // Go runs task in a new goroutine. The caller must call Wait to wait for the
 // task to return and collect its error.
-func Go(task Task) *Single[error] {
+func Go[T any](task func() T) *Single[T] {
 	// N.B. This is closed by Wait.
-	errc := make(chan error, 1)
-	go func() { errc <- task() }()
+	valc := make(chan T, 1)
+	go func() { valc <- task() }()
 
-	return &Single[error]{valc: errc}
+	return &Single[T]{valc: valc}
 }
 
 // Call starts task in a new goroutine. The caller must call Wait to wait for
 // the task to return and collect its result.
 func Call[T any](task func() (T, error)) *Single[Result[T]] {
-	// N.B. This is closed by Wait.
-	valc := make(chan Result[T], 1)
-	go func() {
+	return Go(func() Result[T] {
 		v, err := task()
-		valc <- Result[T]{Value: v, Err: err}
-	}()
-	return &Single[Result[T]]{valc: valc}
+		return Result[T]{Value: v, Err: err}
+	})
 }
 
 // A Result is a pair of an arbitrary value and an error.
