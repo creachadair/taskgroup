@@ -8,7 +8,7 @@ import "sync"
 
 // A Task function is the basic unit of work in a Group. Errors reported by
 // tasks are collected and reported by the group.
-type Task = func() error
+type Task func() error
 
 // A Group manages a collection of cooperating goroutines.  New tasks are added
 // to the group with the Go method.  Call the Wait method to wait for the tasks
