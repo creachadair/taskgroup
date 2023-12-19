@@ -12,8 +12,8 @@ type Single[T any] struct {
 // value it reported.
 func (s *Single[T]) Wait() T {
 	if v, ok := <-s.valc; ok {
-		// This is the first call to receive a value; update err and close the
-		// channel.
+		// This is the first call to receive a value:
+		// Update val and close the channel (in that order).
 		s.val = v
 		close(s.valc)
 	}
