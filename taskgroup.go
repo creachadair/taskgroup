@@ -92,11 +92,13 @@ func (g *Group) cleanup() {
 }
 
 // Wait blocks until all the goroutines currently active in the group have
-// returned, and all reported errors have been delivered to the callback.  Wait
-// returns the first non-nil error returned by any of the goroutines in the
+// returned, and all reported errors have been delivered to the callback.
+// It returns the first non-nil error returned by any of the goroutines in the
 // group and not filtered by an ErrorFunc.
 //
-// After a call to Wait returns, the group is ready for reuse.
+// It is safe to call Wait concurrently from multiple goroutines, but as with
+// sync.WaitGroup no tasks can be added to g while any call to Wait is in
+// progress. Once all Wait calls have returned, the group is ready for reuse.
 func (g *Group) Wait() error { g.cleanup(); return g.err }
 
 // An ErrorFunc is called by a group each time a task reports an error.  Its
