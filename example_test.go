@@ -106,15 +106,14 @@ func shuffled(n int) []int {
 }
 
 func ExampleSingle() {
-	var total int
 	results := make(chan int)
 
 	// Start a task to collect the results of a "search" process.
-	s := taskgroup.Go(func() error {
+	s := taskgroup.Go(func() (total int) {
 		for v := range results {
 			total += v
 		}
-		return nil
+		return
 	})
 
 	const numTasks = 25
@@ -135,15 +134,12 @@ func ExampleSingle() {
 		})
 	}
 
-	// Wait for the searchers to finish.
+	// Wait for the searchers to finish, then signal the collector to stop.
 	g.Wait()
-
-	// Signal the collector to stop, and wait for it to do so.
 	close(results)
-	s.Wait()
 
-	// Now it is safe to use the results.
-	fmt.Println(total)
+	// Now get the final result.
+	fmt.Println(s.Wait())
 	// Output:
 	// 325
 }
