@@ -228,6 +228,37 @@ func TestSingleResult(t *testing.T) {
 	}
 }
 
+func TestCollector(t *testing.T) {
+	var sum int
+	c := taskgroup.NewCollector(func(v int) { sum += v })
+
+	vs := shuffled(15)
+	g := taskgroup.New(nil)
+
+	for i, v := range vs {
+		v := v
+		if v > 10 {
+			// This value should not be accumulated.
+			g.Go(c.Task(func() (int, error) {
+				return -100, errors.New("don't add this")
+			}))
+		} else if i%2 == 0 {
+			// A function with an error.
+			g.Go(c.Task(func() (int, error) { return v, nil }))
+		} else {
+			// A function without an error.
+			g.Go(c.NoError(func() int { return v }))
+		}
+	}
+
+	g.Wait() // wait for tasks to finish
+	c.Wait() // wait for collector
+
+	if want := (10 * 11) / 2; sum != want {
+		t.Errorf("Final result: got %d, want %d", sum, want)
+	}
+}
+
 type peakValue struct {
 	μ        sync.Mutex
 	cur, max int
