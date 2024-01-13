@@ -155,7 +155,7 @@ func ExampleSingle() {
 
 func ExampleCollector() {
 	var total int
-	c := taskgroup.NewCollector[int](func(v int) {
+	c := taskgroup.NewCollector(func(v int) {
 		total += v
 	})
 
@@ -191,7 +191,7 @@ func ExampleCollector_Stream() {
 		who string
 		v   int
 	}
-	c := taskgroup.NewCollector[val](func(z val) { fmt.Println(z.who, z.v) })
+	c := taskgroup.NewCollector(func(z val) { fmt.Println(z.who, z.v) })
 
 	err := taskgroup.New(nil).
 		// The Stream method passes its argument a channel where it may report
