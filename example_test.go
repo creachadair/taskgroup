@@ -195,7 +195,7 @@ func ExampleCollector_Stream() {
 
 	err := taskgroup.New(nil).
 		// The Stream method passes its argument a channel where it may report
-		// multiple values to the colledtor.
+		// multiple values to the collector.
 		Go(c.Stream(func(zs chan<- val) error {
 			for i := 0; i < 3; i++ {
 				zs <- val{"even", 2 * i}
