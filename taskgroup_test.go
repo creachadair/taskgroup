@@ -259,6 +259,26 @@ func TestCollector(t *testing.T) {
 	}
 }
 
+func TestCollector_Stream(t *testing.T) {
+	var sum int
+	c := taskgroup.NewCollector(func(v int) { sum += v })
+
+	g := taskgroup.New(nil).Go(c.Stream(func(vs chan<- int) error {
+		for _, v := range shuffled(10) {
+			vs <- v
+		}
+		return nil
+	}))
+
+	if err := g.Wait(); err != nil {
+		t.Errorf("Unexpected error from group: %v", err)
+	}
+	c.Wait()
+	if want := (10 * 11) / 2; sum != want {
+		t.Errorf("Final result: got %d, want %d", sum, want)
+	}
+}
+
 type peakValue struct {
 	μ        sync.Mutex
 	cur, max int

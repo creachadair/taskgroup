@@ -24,6 +24,7 @@ func NewCollector[T any](value func(T)) *Collector[T] {
 
 // Wait stops the collector and blocks until it has finished processing.
 // It is safe to call Wait multiple times from a single goroutine.
+// Note that after Wait has been called, c is no longer valid.
 func (c *Collector[T]) Wait() {
 	if c.ch != nil {
 		close(c.ch)
@@ -44,6 +45,14 @@ func (c *Collector[T]) Task(f func() (T, error)) Task {
 		c.ch <- v
 		return nil
 	}
+}
+
+// Stream returns a task wrapping a call to f, which is passed a channel on
+// which results can be sent to the accumulator.
+//
+// Note: f must not close its argument channel.
+func (c *Collector[T]) Stream(f func(chan<- T) error) Task {
+	return func() error { return f(c.ch) }
 }
 
 // NoError returns a Task wrapping a call to f. The resulting task reports a
