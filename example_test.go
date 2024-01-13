@@ -139,7 +139,7 @@ func ExampleSingle() {
 		return err
 	})
 
-	fmt.Println("wait")
+	fmt.Println("work, work")
 	if err := s.Wait(); err != nil {
 		log.Fatalf("Read failed: %v", err)
 	}
@@ -148,7 +148,7 @@ func ExampleSingle() {
 
 	// Output:
 	// start
-	// wait
+	// work, work
 	// done
 	// 2500 bytes
 }
