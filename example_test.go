@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"time"
@@ -105,15 +106,57 @@ func shuffled(n int) []int {
 	return vs
 }
 
-func ExampleSingle() {
-	results := make(chan int)
+type slowReader struct {
+	n int
+	d time.Duration
+}
 
-	// Start a task to collect the results of a "search" process.
-	s := taskgroup.Go(func() (total int) {
-		for v := range results {
-			total += v
-		}
-		return
+func (s *slowReader) Read(data []byte) (int, error) {
+	if s.n == 0 {
+		return 0, io.EOF
+	}
+	time.Sleep(s.d)
+	nr := min(len(data), s.n)
+	s.n -= nr
+	for i := 0; i < nr; i++ {
+		data[i] = 'x'
+	}
+	return nr, nil
+}
+
+func ExampleSingle() {
+	// A fake reader to simulate a slow file read.
+	// 2500 bytes and each read takes 50ms.
+	sr := &slowReader{2500, 50 * time.Millisecond}
+
+	var data []byte
+
+	// Start a task to read te "file" in the background.
+	fmt.Println("start")
+	s := taskgroup.Go(func() error {
+		var err error
+		data, err = io.ReadAll(sr)
+		return err
+	})
+
+	fmt.Println("wait")
+	if err := s.Wait(); err != nil {
+		log.Fatalf("Read failed: %v", err)
+	}
+	fmt.Println("done")
+	fmt.Println(len(data), "bytes")
+
+	// Output:
+	// start
+	// wait
+	// done
+	// 2500 bytes
+}
+
+func ExampleCollector() {
+	var total int
+	c := taskgroup.NewCollector[int](func(v int) {
+		total += v
 	})
 
 	const numTasks = 25
@@ -123,23 +166,22 @@ func ExampleSingle() {
 	g := taskgroup.New(nil)
 	for i := 0; i < numTasks; i++ {
 		target := i + 1
-		g.Go(func() error {
+		g.Go(c.Task(func() (int, error) {
 			for _, v := range input {
 				if v == target {
-					results <- v
-					break
+					return v, nil
 				}
 			}
-			return nil
-		})
+			return 0, errors.New("not found")
+		}))
 	}
 
 	// Wait for the searchers to finish, then signal the collector to stop.
 	g.Wait()
-	close(results)
+	c.Wait()
 
 	// Now get the final result.
-	fmt.Println(s.Wait())
+	fmt.Println(total)
 	// Output:
 	// 325
 }

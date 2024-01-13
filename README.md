@@ -229,38 +229,77 @@ start(task4) // blocks until one of the previous tasks is finished
 
 ## Solo Tasks
 
-In some cases it is useful to have a solo background task to handle a separate
-concern, such as collecting the results from a batch of concurrent workers.
-
-For example, suppose we have a group of tasks processing a complex search, and
-we want to aggregate the results.  We don't want to add this task to the same
-group as the workers, because it needs to know when the rest of the workers
-have all completed.  On the other hand, creating another whole group just for
-one task is overkill, since we only need one additional goroutine.
-
-To handle such cases, the `Go` constructor is helpful: It manages a single
-background goroutine with a separate wait:
+In some cases it is useful to start a solo background task to handle an
+isolated concern. For example, suppose we want to read a file into a buffer
+while we take care of some other work.  Rather than creating a whole group for
+a single goroutine, we can create a solo task using the `Go` constructor.
 
 ```go
-results := make(chan int)
-s := taskgroup.Go(func() (total int) {
-    for v := range results {
-        total += v
-    }
-    return
+var data []byte
+s := taskgroup.Go(func() error {
+  f, err := os.Open(filePath)
+  if err != nil {
+     return err
+  }
+  defer f.Close()
+  data, err = io.ReadAll(f)
+  return err
 })
+```
 
-g := taskgroup.New(nil)
-for i := 0; i < numTasks; i++ {
-    batch := newBatch(i)
-    g.Go(func() error {
-        return search(batch)
-    })
+When we're ready, we call `Wait` to receive the result of the task:
+
+```go
+if err := s.Wait(); err != nil {
+   log.Fatalf("Loading config failed: %v", err)
 }
+doThingsWith(data)
+```
 
-// Wait for the workers to finish, then signal the collector to stop.
-g.Wait(); close(results)
+## Collecting Results
 
-// Now get the final result.
-fmt.Println(s.Wait())
+One common use for a background task is accumulating the results from a batch
+of concurrent workers. This can be handled by a solo task, as described above,
+and it is a common enough case that the library provides a `Collector` type to
+handle it specifically.
+
+To use it, pass a function to `NewCollector` to receive the values:
+
+```go
+var sum int
+c := taskgroup.NewCollector(func(v int) { sum += v })
+```
+
+Internally, a `Collector` wraps a solo task and a channel to receive results.
+
+The `Task` and `NoError` methods of the collector `c` can then be used to wrap
+a function that reports a value. If the function reports an error, that error
+is returned from the task as usual. Otherwise, its non-error value is given to
+the callback. As in the above example, calls to the function are serialized so
+that it is safe to access state without additional locking:
+
+```go
+// Report an error, no value for the collector.
+g.Go(c.Task(func() (int, error) {
+   return -1, errors.New("bad")
+}))
+
+// Report the value 25 to the collector.
+g.Go(c.Task(func() (int, error) {
+   return 25, nil
+}))
+
+// Report a random integer to the collector.
+g.Go(c.NoError(func() int { return rand.Intn(1000) })
+```
+
+Once all the tasks are done, call `Wait` to stop the collector and wait for it
+to finish:
+
+```go
+g.Wait()  // wait for tasks to finish
+c.Wait()  // wait for the collector to finish
+
+// Now you can access the values accumulated by c.
+fmt.Println(sum)
 ```
