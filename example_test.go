@@ -185,3 +185,43 @@ func ExampleCollector() {
 	// Output:
 	// 325
 }
+
+func ExampleCollector_Stream() {
+	type val struct {
+		who string
+		v   int
+	}
+	c := taskgroup.NewCollector[val](func(z val) { fmt.Println(z.who, z.v) })
+
+	err := taskgroup.New(nil).
+		// The Stream method passes its argument a channel where it may report
+		// multiple values to the colledtor.
+		Go(c.Stream(func(zs chan<- val) error {
+			for i := 0; i < 3; i++ {
+				zs <- val{"even", 2 * i}
+			}
+			return nil
+		})).
+		// Multiple streams are fine.
+		Go(c.Stream(func(zs chan<- val) error {
+			for i := 0; i < 3; i++ {
+				zs <- val{"odd", 2*i + 1}
+			}
+			// An error reported by a stream is propagated just like any other
+			// task error.
+			return errors.New("no bueno")
+		})).
+		Wait()
+	if err == nil || err.Error() != "no bueno" {
+		log.Fatalf("Unexpected error: %v", err)
+	}
+
+	c.Wait()
+	// Output unordered:
+	// even 0
+	// odd 1
+	// even 2
+	// odd 3
+	// even 4
+	// odd 5
+}
