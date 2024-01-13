@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -26,6 +27,8 @@ func busyWork(n int, err error) taskgroup.Task {
 func TestBasic(t *testing.T) {
 	defer leaktest.Check(t)()
 
+	t.Logf("Group value is %d bytes", reflect.TypeOf((*taskgroup.Group)(nil)).Elem().Size())
+
 	// Verify that the group works at all.
 	g := taskgroup.New(nil).Go(busyWork(25, nil))
 	if err := g.Wait(); err != nil {
@@ -38,6 +41,20 @@ func TestBasic(t *testing.T) {
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected task error: %v", err)
 	}
+
+	t.Run("Zero", func(t *testing.T) {
+		var g taskgroup.Group
+		g.Go(busyWork(30, nil))
+		if err := g.Wait(); err != nil {
+			t.Errorf("Unexpected task error: %v", err)
+		}
+
+		_, run := g.Limit(1)
+		run(busyWork(60, nil))
+		if err := g.Wait(); err != nil {
+			t.Errorf("Unexpected task error: %v", err)
+		}
+	})
 }
 
 func TestErrorPropagation(t *testing.T) {
