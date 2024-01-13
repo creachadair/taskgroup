@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/creachadair/taskgroup"
@@ -67,14 +68,24 @@ func ExampleTrigger() {
 }
 
 func ExampleListen() {
+	// The taskgroup itself will only report the first non-nil task error, but
+	// you can use an error listener used to accumulate all of them.
+	var all []error
 	g := taskgroup.New(taskgroup.Listen(func(e error) {
-		fmt.Println(e)
+		all = append(all, e)
 	}))
-	g.Go(func() error { return errors.New("heard you") })
-	fmt.Println(g.Wait()) // the error was preserved
-	// Output:
-	// heard you
-	// heard you
+	g.Go(func() error { return errors.New("badness 1") })
+	g.Go(func() error { return errors.New("badness 2") })
+	g.Go(func() error { return errors.New("badness 3") })
+
+	if err := g.Wait(); err == nil || !strings.Contains(err.Error(), "badness") {
+		log.Fatalf("Unexpected error: %v", err)
+	}
+	fmt.Println(errors.Join(all...))
+	// Unordered output:
+	// badness 1
+	// badness 2
+	// badness 3
 }
 
 func ExampleGroup_Limit() {
@@ -217,7 +228,7 @@ func ExampleCollector_Stream() {
 	}
 
 	c.Wait()
-	// Output unordered:
+	// Unordered output:
 	// even 0
 	// odd 1
 	// even 2
