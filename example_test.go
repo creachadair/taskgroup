@@ -189,7 +189,6 @@ func ExampleCollector() {
 
 	// Wait for the searchers to finish, then signal the collector to stop.
 	g.Wait()
-	c.Wait()
 
 	// Now get the final result.
 	fmt.Println(total)
@@ -197,7 +196,7 @@ func ExampleCollector() {
 	// 325
 }
 
-func ExampleCollector_Stream() {
+func ExampleCollector_Report() {
 	type val struct {
 		who string
 		v   int
@@ -205,29 +204,26 @@ func ExampleCollector_Stream() {
 	c := taskgroup.NewCollector(func(z val) { fmt.Println(z.who, z.v) })
 
 	err := taskgroup.New(nil).
-		// The Stream method passes its argument a channel where it may report
-		// multiple values to the collector.
-		Go(c.Stream(func(zs chan<- val) error {
+		// The Report method passes its argument a function to report multiple
+		// values to the collector.
+		Go(c.Report(func(report func(v val)) error {
 			for i := 0; i < 3; i++ {
-				zs <- val{"even", 2 * i}
+				report(val{"even", 2 * i})
 			}
 			return nil
 		})).
-		// Multiple streams are fine.
-		Go(c.Stream(func(zs chan<- val) error {
+		// Multiple reporters are fine.
+		Go(c.Report(func(report func(v val)) error {
 			for i := 0; i < 3; i++ {
-				zs <- val{"odd", 2*i + 1}
+				report(val{"odd", 2*i + 1})
 			}
-			// An error reported by a stream is propagated just like any other
-			// task error.
+			// An error from a reporter is propagated like any other task error.
 			return errors.New("no bueno")
 		})).
 		Wait()
 	if err == nil || err.Error() != "no bueno" {
 		log.Fatalf("Unexpected error: %v", err)
 	}
-
-	c.Wait()
 	// Unordered output:
 	// even 0
 	// odd 1
