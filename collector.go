@@ -27,8 +27,8 @@ func NewCollector[T any](value func(T)) *Collector[T] { return &Collector[T]{han
 // Wait waits until the collector has finished processing.
 //
 // Deprecated: This method is now a noop; it is safe but unnecessary to call
-// it.  The state serviced by c is settled once all the goroutines writing to
-// the collector have returned.  It may be removed in a future version.
+// it. Once all the tasks created from c have returned, any state accessed by
+// the accumulator is settled. Wait may be removed in a future version.
 func (c *Collector[T]) Wait() {}
 
 // Task returns a Task wrapping a call to f. If f reports an error, that error
