@@ -208,6 +208,39 @@ func TestSingleTask(t *testing.T) {
 	})
 }
 
+func TestWaitMoreTasks(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	var results int
+	coll := taskgroup.NewCollector(func(int) {
+		results++
+	})
+
+	g := taskgroup.New(nil)
+
+	// Test that if a task spawns more tasks on its own recognizance, waiting
+	// correctly waits for all of them provided we do not let the group go empty
+	// before all the tasks are spawned.
+	var countdown func(int) int
+	countdown = func(n int) int {
+		if n > 1 {
+			// The subordinate task, if there is one, is started before this one
+			// exits, ensuring the group is kept "afloat".
+			g.Go(coll.NoError(func() int {
+				return countdown(n - 1)
+			}))
+		}
+		return n
+	}
+
+	g.Go(coll.NoError(func() int { return countdown(15) }))
+	g.Wait()
+
+	if results != 15 {
+		t.Errorf("Got %d results, want 10", results)
+	}
+}
+
 func TestSingleResult(t *testing.T) {
 	defer leaktest.Check(t)()
 
@@ -250,22 +283,20 @@ func TestCollector(t *testing.T) {
 			g.Go(c.NoError(func() int { return v }))
 		}
 	}
-
 	g.Wait() // wait for tasks to finish
-	c.Wait() // wait for collector
 
 	if want := (10 * 11) / 2; sum != want {
 		t.Errorf("Final result: got %d, want %d", sum, want)
 	}
 }
 
-func TestCollector_Stream(t *testing.T) {
+func TestCollector_Report(t *testing.T) {
 	var sum int
 	c := taskgroup.NewCollector(func(v int) { sum += v })
 
-	g := taskgroup.New(nil).Go(c.Stream(func(vs chan<- int) error {
+	g := taskgroup.New(nil).Go(c.Report(func(report func(v int)) error {
 		for _, v := range shuffled(10) {
-			vs <- v
+			report(v)
 		}
 		return nil
 	}))
@@ -273,7 +304,6 @@ func TestCollector_Stream(t *testing.T) {
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected error from group: %v", err)
 	}
-	c.Wait()
 	if want := (10 * 11) / 2; sum != want {
 		t.Errorf("Final result: got %d, want %d", sum, want)
 	}

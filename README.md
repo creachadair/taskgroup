@@ -4,8 +4,8 @@
 
 A `*taskgroup.Group` represents a group of goroutines working on related tasks.
 New tasks can be added to the group at will, and the caller can wait until all
-tasks are complete. Errors are automatically collected and delivered to a
-user-provided callback in a single goroutine.  This does not replace the full
+tasks are complete. Errors are automatically collected and delivered
+synchronously to a user-provided callback.  This does not replace the full
 generality of Go's built-in features, but it simplifies some of the plumbing
 for common concurrent tasks.
 
@@ -229,7 +229,7 @@ start(task4) // blocks until one of the previous tasks is finished
 
 ## Solo Tasks
 
-In some cases it is useful to start a solo background task to handle an
+In some cases it is useful to start a single background task to handle an
 isolated concern. For example, suppose we want to read a file into a buffer
 while we take care of some other work.  Rather than creating a whole group for
 a single goroutine, we can create a solo task using the `Go` constructor.
@@ -270,13 +270,11 @@ var sum int
 c := taskgroup.NewCollector(func(v int) { sum += v })
 ```
 
-Internally, a `Collector` wraps a solo task and a channel to receive results.
-
-The `Task` and `NoError` methods of the collector `c` can then be used to wrap
-a function that reports a value. If the function reports an error, that error
-is returned from the task as usual. Otherwise, its non-error value is given to
-the callback. As in the above example, calls to the function are serialized so
-that it is safe to access state without additional locking:
+The `Task`, `NoError`, and `Report` methods of `c` wrap a function that yields
+a value into a task. If the function reports an error, that error is returned
+from the task as usual. Otherwise, its non-error value is given to the
+accumulator callback. As in the above example, calls to the function are
+serialized so that it is safe to access state without additional locking:
 
 ```go
 // Report an error, no value for the collector.
@@ -291,14 +289,21 @@ g.Go(c.Task(func() (int, error) {
 
 // Report a random integer to the collector.
 g.Go(c.NoError(func() int { return rand.Intn(1000) })
+
+// Report multiple values to the collector.
+g.Go(c.Report(func(report func(int)) error {
+   report(10)
+   report(20)
+   report(30)
+   return nil
+}))
 ```
 
-Once all the tasks are done, call `Wait` to stop the collector and wait for it
-to finish:
+Once all the tasks derived from the collector are done, it is safe to access
+the values accumulated by the callback:
 
 ```go
 g.Wait()  // wait for tasks to finish
-c.Wait()  // wait for the collector to finish
 
 // Now you can access the values accumulated by c.
 fmt.Println(sum)
