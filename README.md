@@ -146,9 +146,9 @@ go func() {
 ```
 
 So far, we're up to four channels (errs, edone, context, and throttle) plus a
-wait group.  The point to note is that while these tools are easy to express
-what we want, it can be tedious to wire them all together and keep track of the
-current state of the system.
+wait group.  The point to note is that while these tools are quite able to
+express what we want, it can be tedious to wire them all together and keep
+track of the current state of the system.
 
 The `taskgroup` package exists to handle the plumbing for the common case of a
 group of tasks that are all working on a related outcome (_e.g.,_ copying a
