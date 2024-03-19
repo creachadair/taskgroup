@@ -85,10 +85,11 @@ func (g *Group) handleError(err error) {
 // group and not filtered by an ErrorFunc.
 //
 // As with sync.WaitGroup, new tasks can be added to g during a call to Wait
-// only if there was already at least one task active when Wait was called.
-// After Wait has returned, the group is ready for reuse.
+// only if the group contains at least one active task when Wait is called and
+// continuously thereafter until the last concurrent call to g.Go returns.
 //
-// Wait may be called from at most one goroutine at a time.
+// Wait may be called from at most one goroutine at a time.  After Wait has
+// returned, the group is ready for reuse.
 func (g *Group) Wait() error {
 	g.wg.Wait()
 	g.μ.Lock()
