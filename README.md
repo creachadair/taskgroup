@@ -230,9 +230,11 @@ start(task4) // blocks until one of the previous tasks is finished
 ## Solo Tasks
 
 In some cases it is useful to start a single background task to handle an
-isolated concern. For example, suppose we want to read a file into a buffer
-while we take care of some other work.  Rather than creating a whole group for
-a single goroutine, we can create a solo task using the `Go` constructor.
+isolated concern (elsewhere sometimes described as a "promise" or a "future").
+
+For example, suppose we want to read a file into a buffer while we take care of
+some other work.  Rather than creating a whole group for a single goroutine, we
+can create a solo task using the `Go` constructor.
 
 ```go
 var data []byte
