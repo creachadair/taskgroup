@@ -57,10 +57,10 @@ func New(ef ErrorFunc) *Group { return &Group{onError: ef} }
 
 // Go runs task in a new goroutine in g, and returns g to permit chaining.
 func (g *Group) Go(task Task) *Group {
+	g.wg.Add(1)
 	if g.active.Load() == 0 {
 		g.activate()
 	}
-	g.wg.Add(1)
 	go func() {
 		defer g.wg.Done()
 		if err := task(); err != nil {
@@ -94,7 +94,11 @@ func (g *Group) Wait() error {
 	g.wg.Wait()
 	g.μ.Lock()
 	defer g.μ.Unlock()
-	defer g.active.Store(0)
+
+	// If the group is still active, deactivate it now.
+	if g.active.Load() != 0 {
+		g.active.Store(0)
+	}
 	return g.err
 }
 
