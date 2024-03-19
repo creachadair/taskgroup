@@ -27,6 +27,9 @@ type Group struct {
 
 	// active is nonzero when the group is "active", meaning there has been at
 	// least one call to Go since the group was created or the last Wait.
+	//
+	// Together active and μ work as a kind of resettable sync.Once; the fast
+	// path reads active and only acquires μ if it discovers setup is needed.
 	active atomic.Uint32
 
 	μ   sync.Mutex // guards err
