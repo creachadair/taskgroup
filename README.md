@@ -9,7 +9,7 @@ synchronously to a user-provided callback.  This does not replace the full
 generality of Go's built-in features, but it simplifies some of the plumbing
 for common concurrent tasks.
 
-Here is a [working example in the Go Playground](https://play.golang.org/p/V2slrnMu2Ec).
+Here is a [working example in the Go Playground](https://go.dev/play/p/wCZzMDXRUuM).
 
 ## Rationale
 
