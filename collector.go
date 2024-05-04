@@ -24,13 +24,6 @@ func (c *Collector[T]) report(v T) {
 // reported by the underlying function have been processed by the accumulator.
 func NewCollector[T any](value func(T)) *Collector[T] { return &Collector[T]{handle: value} }
 
-// Wait waits until the collector has finished processing.
-//
-// Deprecated: This method is now a noop; it is safe but unnecessary to call
-// it. Once all the tasks created from c have returned, any state accessed by
-// the accumulator is settled. Wait may be removed in a future version.
-func (c *Collector[T]) Wait() {}
-
 // Task returns a Task wrapping a call to f. If f reports an error, that error
 // is propagated as the return value of the task; otherwise, the non-error
 // value reported by f is passed to the value callback.
@@ -50,26 +43,6 @@ func (c *Collector[T]) Task(f func() (T, error)) Task {
 // the accumulator has finished processing the value.
 func (c *Collector[T]) Report(f func(report func(T)) error) Task {
 	return func() error { return f(c.report) }
-}
-
-// Stream returns a task wrapping a call to f, which is passed a channel on
-// which results can be sent to the accumulator. Each call to Stream starts a
-// goroutine to process the values on the channel.
-//
-// Deprecated: Tasks that wish to deliver multiple values should use Report
-// instead, which does not spawn a goroutine. This method may be removed in a
-// future version.
-func (c *Collector[T]) Stream(f func(chan<- T) error) Task {
-	return func() error {
-		ch := make(chan T)
-		s := Go(NoError(func() {
-			for v := range ch {
-				c.report(v)
-			}
-		}))
-		defer func() { close(ch); s.Wait() }()
-		return f(ch)
-	}
 }
 
 // NoError returns a Task wrapping a call to f. The resulting task reports a
