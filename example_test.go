@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"time"
 
@@ -106,17 +106,6 @@ func ExampleGroup_Limit() {
 	// Max active ≤ 4: true
 }
 
-func shuffled(n int) []int {
-	vs := make([]int, n)
-	for i := range vs {
-		vs[i] = i + 1
-	}
-	rand.Shuffle(n, func(i, j int) {
-		vs[i], vs[j] = vs[j], vs[i]
-	})
-	return vs
-}
-
 type slowReader struct {
 	n int
 	d time.Duration
@@ -171,7 +160,7 @@ func ExampleCollector() {
 	})
 
 	const numTasks = 25
-	input := shuffled(500)
+	input := rand.Perm(500)
 
 	// Start a bunch of tasks to find elements in the input...
 	g := taskgroup.New(nil)

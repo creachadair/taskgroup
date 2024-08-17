@@ -3,7 +3,7 @@ package taskgroup_test
 import (
 	"context"
 	"errors"
-	"math/rand"
+	"math/rand/v2"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -17,7 +17,7 @@ import (
 const numTasks = 64
 
 // randms returns a random duration of up to n milliseconds.
-func randms(n int) time.Duration { return time.Duration(rand.Intn(n)) * time.Millisecond }
+func randms(n int) time.Duration { return time.Duration(rand.IntN(n)) * time.Millisecond }
 
 // busyWork returns a Task that does nothing for n ms and returns err.
 func busyWork(n int, err error) taskgroup.Task {
@@ -265,7 +265,7 @@ func TestCollector(t *testing.T) {
 	var sum int
 	c := taskgroup.NewCollector(func(v int) { sum += v })
 
-	vs := shuffled(15)
+	vs := rand.Perm(15)
 	g := taskgroup.New(nil)
 
 	for i, v := range vs {
@@ -295,7 +295,7 @@ func TestCollector_Report(t *testing.T) {
 	c := taskgroup.NewCollector(func(v int) { sum += v })
 
 	g := taskgroup.New(nil).Go(c.Report(func(report func(v int)) error {
-		for _, v := range shuffled(10) {
+		for _, v := range rand.Perm(10) {
 			report(v)
 		}
 		return nil
@@ -304,7 +304,7 @@ func TestCollector_Report(t *testing.T) {
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected error from group: %v", err)
 	}
-	if want := (10 * 11) / 2; sum != want {
+	if want := (9 * 10) / 2; sum != want {
 		t.Errorf("Final result: got %d, want %d", sum, want)
 	}
 }
