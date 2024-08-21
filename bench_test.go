@@ -1,7 +1,7 @@
 package taskgroup_test
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"testing"
 )
@@ -28,7 +28,7 @@ func BenchmarkChan(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		go func() {
 			defer wg.Done()
-			ch <- rand.Intn(1000)
+			ch <- rand.IntN(1000)
 		}()
 	}
 	wg.Wait()
@@ -51,7 +51,7 @@ func BenchmarkLock(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		go func() {
 			defer wg.Done()
-			report(rand.Intn(1000))
+			report(rand.IntN(1000))
 		}()
 	}
 	wg.Wait()
