@@ -1,6 +1,6 @@
 package taskgroup
 
-// A single manages a single background goroutine. The task is started when the
+// A Single manages a single background goroutine. The task is started when the
 // value is first created, and the caller can use the Wait method to block
 // until it has exited.
 type Single[T any] struct {
