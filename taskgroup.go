@@ -70,6 +70,12 @@ func (g *Group) Go(task Task) *Group {
 	return g
 }
 
+// Run runs task in a new goroutine in g, and returns g to permit chaining.
+// This is shorthand for:
+//
+//	g.Go(taskgroup.NoError(task))
+func (g *Group) Run(task func()) *Group { return g.Go(NoError(task)) }
+
 func (g *Group) handleError(err error) {
 	g.μ.Lock()
 	defer g.μ.Unlock()

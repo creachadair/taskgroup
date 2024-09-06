@@ -30,6 +30,14 @@ func Go[T any](task func() T) *Single[T] {
 	return &Single[T]{valc: valc}
 }
 
+// Run runs task in a new goroutine. The caller must call Wait to wait for the
+// task to return and collect its error.  This is shorthand for:
+//
+//	taskgroup.Go(taskgroup.NoError(task))
+//
+// The error reported by Wait is always nil.
+func Run(task func()) *Single[error] { return Go(NoError(task)) }
+
 // Call starts task in a new goroutine. The caller must call Wait to wait for
 // the task to return and collect its result.
 func Call[T any](task func() (T, error)) *Single[Result[T]] {
