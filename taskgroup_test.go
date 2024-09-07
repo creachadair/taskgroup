@@ -194,11 +194,11 @@ func TestSingleTask(t *testing.T) {
 			return <-release
 		})
 
-		g := taskgroup.New(nil).Go(taskgroup.NoError(func() {
+		g := taskgroup.New(nil).Run(func() {
 			if err := s.Wait(); err != sentinel {
 				t.Errorf("Background Wait: got %v, want %v", err, sentinel)
 			}
-		}))
+		})
 
 		release <- sentinel
 		if err := s.Wait(); err != sentinel {
@@ -212,7 +212,7 @@ func TestWaitMoreTasks(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	var results int
-	coll := taskgroup.NewCollector(func(int) {
+	coll := taskgroup.Collect(func(int) {
 		results++
 	})
 
@@ -226,14 +226,14 @@ func TestWaitMoreTasks(t *testing.T) {
 		if n > 1 {
 			// The subordinate task, if there is one, is started before this one
 			// exits, ensuring the group is kept "afloat".
-			g.Go(coll.NoError(func() int {
+			g.Go(coll.Run(func() int {
 				return countdown(n - 1)
 			}))
 		}
 		return n
 	}
 
-	g.Go(coll.NoError(func() int { return countdown(15) }))
+	g.Go(coll.Run(func() int { return countdown(15) }))
 	g.Wait()
 
 	if results != 15 {
@@ -263,7 +263,7 @@ func TestSingleResult(t *testing.T) {
 
 func TestCollector(t *testing.T) {
 	var sum int
-	c := taskgroup.NewCollector(func(v int) { sum += v })
+	c := taskgroup.Collect(func(v int) { sum += v })
 
 	vs := rand.Perm(15)
 	g := taskgroup.New(nil)
@@ -272,15 +272,15 @@ func TestCollector(t *testing.T) {
 		v := v
 		if v > 10 {
 			// This value should not be accumulated.
-			g.Go(c.Task(func() (int, error) {
+			g.Go(c.Call(func() (int, error) {
 				return -100, errors.New("don't add this")
 			}))
 		} else if i%2 == 0 {
 			// A function with an error.
-			g.Go(c.Task(func() (int, error) { return v, nil }))
+			g.Go(c.Call(func() (int, error) { return v, nil }))
 		} else {
 			// A function without an error.
-			g.Go(c.NoError(func() int { return v }))
+			g.Go(c.Run(func() int { return v }))
 		}
 	}
 	g.Wait() // wait for tasks to finish
@@ -292,7 +292,7 @@ func TestCollector(t *testing.T) {
 
 func TestCollector_Report(t *testing.T) {
 	var sum int
-	c := taskgroup.NewCollector(func(v int) { sum += v })
+	c := taskgroup.Collect(func(v int) { sum += v })
 
 	g := taskgroup.New(nil).Go(c.Report(func(report func(v int)) error {
 		for _, v := range rand.Perm(10) {

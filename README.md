@@ -272,25 +272,25 @@ var sum int
 c := taskgroup.NewCollector(func(v int) { sum += v })
 ```
 
-The `Task`, `NoError`, and `Report` methods of `c` wrap a function that yields
-a value into a task. If the function reports an error, that error is returned
+The `Call`, `Run`, and `Report` methods of `c` wrap a function that yields a
+value into a task. If the function reports an error, that error is returned
 from the task as usual. Otherwise, its non-error value is given to the
 accumulator callback. As in the above example, calls to the function are
 serialized so that it is safe to access state without additional locking:
 
 ```go
 // Report an error, no value for the collector.
-g.Go(c.Task(func() (int, error) {
+g.Go(c.Call(func() (int, error) {
    return -1, errors.New("bad")
 }))
 
 // Report the value 25 to the collector.
-g.Go(c.Task(func() (int, error) {
+g.Go(c.Call(func() (int, error) {
    return 25, nil
 }))
 
 // Report a random integer to the collector.
-g.Go(c.NoError(func() int { return rand.Intn(1000) })
+g.Go(c.Run(func() int { return rand.Intn(1000) })
 
 // Report multiple values to the collector.
 g.Go(c.Report(func(report func(int)) error {

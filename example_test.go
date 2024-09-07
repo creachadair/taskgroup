@@ -155,7 +155,7 @@ func ExampleSingle() {
 
 func ExampleCollector() {
 	var total int
-	c := taskgroup.NewCollector(func(v int) {
+	c := taskgroup.Collect(func(v int) {
 		total += v
 	})
 
@@ -190,7 +190,7 @@ func ExampleCollector_Report() {
 		who string
 		v   int
 	}
-	c := taskgroup.NewCollector(func(z val) { fmt.Println(z.who, z.v) })
+	c := taskgroup.Collect(func(z val) { fmt.Println(z.who, z.v) })
 
 	err := taskgroup.New(nil).
 		// The Report method passes its argument a function to report multiple
