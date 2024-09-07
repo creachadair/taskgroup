@@ -1,6 +1,7 @@
 # taskgroup
 
-[![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://pkg.go.dev/github.com/creachadair/taskgroup)
+[![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=khaki)](https://pkg.go.dev/github.com/creachadair/taskgroup)
+[![CI](https://github.com/creachadair/taskgroup/actions/workflows/go-presubmit.yml/badge.svg?event=push&branch=main)](https://github.com/creachadair/taskgroup/actions/workflows/go-presubmit.yml)
 
 A `*taskgroup.Group` represents a group of goroutines working on related tasks.
 New tasks can be added to the group at will, and the caller can wait until all
