@@ -262,6 +262,8 @@ func TestSingleResult(t *testing.T) {
 }
 
 func TestCollector(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	var sum int
 	c := taskgroup.Collect(func(v int) { sum += v })
 
@@ -291,6 +293,8 @@ func TestCollector(t *testing.T) {
 }
 
 func TestCollector_Report(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	var sum int
 	c := taskgroup.Collect(func(v int) { sum += v })
 
