@@ -28,18 +28,18 @@ and starting a goroutine to copy each of the files concurrently.  In outline:
 
 ```go
 func copyTree(source, target string) error {
-	err := filepath.Walk(source, func(path string, fi os.FileInfo, err error) error {
-		adjusted := adjustPath(path)
-		if fi.IsDir() {
-			return os.MkdirAll(adjusted, 0755)
-		}
-		go copyFile(adjusted, target)
-		return nil
-	})
-	if err != nil {
-		// ... clean up the output directory ...
-	}
-	return err
+    err := filepath.Walk(source, func(path string, fi os.FileInfo, err error) error {
+        adjusted := adjustPath(path)
+        if fi.IsDir() {
+            return os.MkdirAll(adjusted, 0755)
+        }
+        go copyFile(adjusted, target)
+        return nil
+    })
+    if err != nil {
+        // ... clean up the output directory ...
+    }
+    return err
 }
 ```
 
@@ -138,11 +138,11 @@ run us out of file descriptors.  To handle this we might use a
 channel:
 
 ```go
-throttle := make(chan struct{}, 64)  // allow up to 64 concurrent copies
+throttle := make(chan struct{}, 64) // allow up to 64 concurrent copies
 go func() {
-   throttle <- struct{}{} // block until the throttle has a free slot
-   defer func() { wg.Done(); <-throttle }()
-   copyFile(ctx, adjusted, target, errs)
+    throttle <- struct{}{} // block until the throttle has a free slot
+    defer func() { wg.Done(); <-throttle }()
+    copyFile(ctx, adjusted, target, errs)
 }()
 ```
 
@@ -200,10 +200,10 @@ ignore "file not found" errors from a copy operation:
 
 ```go
 g := taskgroup.New(func(err error) error {
-   if os.IsNotExist(err) {
-      return nil // ignore files that do not exist
-   }
-   return err
+    if os.IsNotExist(err) {
+        return nil // ignore files that do not exist
+    }
+    return err
 })
 ```
 
@@ -314,12 +314,12 @@ serialized so that it is safe to access state without additional locking:
 ```go
 // Report an error, no value for the collector.
 g.Go(c.Call(func() (int, error) {
-   return -1, errors.New("bad")
+    return -1, errors.New("bad")
 }))
 
 // Report the value 25 to the collector.
 g.Go(c.Call(func() (int, error) {
-   return 25, nil
+    return 25, nil
 }))
 
 // Report a random integer to the collector.
@@ -327,10 +327,10 @@ g.Go(c.Run(func() int { return rand.Intn(1000) })
 
 // Report multiple values to the collector.
 g.Go(c.Report(func(report func(int)) error {
-   report(10)
-   report(20)
-   report(30)
-   return nil
+    report(10)
+    report(20)
+    report(30)
+    return nil
 }))
 ```
 
