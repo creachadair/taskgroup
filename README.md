@@ -279,11 +279,11 @@ of concurrent workers. This can be handled by a solo task, as described above,
 and it is a common enough case that the library provides a `Collector` type to
 handle it specifically.
 
-To use it, pass a function to `NewCollector` to receive the values:
+To use it, pass a function to `Collect` to receive the values:
 
 ```go
 var sum int
-c := taskgroup.NewCollector(func(v int) { sum += v })
+c := taskgroup.Collect(func(v int) { sum += v })
 ```
 
 The `Call`, `Run`, and `Report` methods of `c` wrap a function that yields a
