@@ -16,15 +16,13 @@ import (
 func ExampleGroup() {
 	msg := make(chan string)
 	g := taskgroup.New(nil)
-	g.Go(func() error {
+	g.Run(func() {
 		msg <- "ping"
 		fmt.Println(<-msg)
-		return nil
 	})
-	g.Go(func() error {
+	g.Run(func() {
 		fmt.Println(<-msg)
 		msg <- "pong"
-		return nil
 	})
 	g.Wait()
 	fmt.Println("<done>")
@@ -129,18 +127,15 @@ func ExampleSingle() {
 	// 2500 bytes and each read takes 50ms.
 	sr := &slowReader{2500, 50 * time.Millisecond}
 
-	var data []byte
-
 	// Start a task to read te "file" in the background.
 	fmt.Println("start")
-	s := taskgroup.Go(func() error {
-		var err error
-		data, err = io.ReadAll(sr)
-		return err
+	s := taskgroup.Call(func() ([]byte, error) {
+		return io.ReadAll(sr)
 	})
 
 	fmt.Println("work, work")
-	if err := s.Wait(); err != nil {
+	data, err := s.Wait().Get()
+	if err != nil {
 		log.Fatalf("Read failed: %v", err)
 	}
 	fmt.Println("done")
@@ -164,9 +159,9 @@ func ExampleCollector() {
 
 	// Start a bunch of tasks to find elements in the input...
 	g := taskgroup.New(nil)
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
 		target := i + 1
-		g.Go(c.Task(func() (int, error) {
+		g.Go(c.Call(func() (int, error) {
 			for _, v := range input {
 				if v == target {
 					return v, nil
@@ -196,14 +191,14 @@ func ExampleCollector_Report() {
 		// The Report method passes its argument a function to report multiple
 		// values to the collector.
 		Go(c.Report(func(report func(v val)) error {
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				report(val{"even", 2 * i})
 			}
 			return nil
 		})).
 		// Multiple reporters are fine.
 		Go(c.Report(func(report func(v val)) error {
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				report(val{"odd", 2*i + 1})
 			}
 			// An error from a reporter is propagated like any other task error.
