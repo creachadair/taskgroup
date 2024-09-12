@@ -246,28 +246,47 @@ start(task4) // blocks until one of the previous tasks is finished
 In some cases it is useful to start a single background task to handle an
 isolated concern (elsewhere sometimes described as a "promise" or a "future").
 
-For example, suppose we want to read a file into a buffer while we take care of
-some other work.  Rather than creating a whole group for a single goroutine, we
-can create a solo task using the `Go` constructor.
+For example, suppose we want to run some expensive background cleanup task
+while we take care of other work. Rather than create a whole group for a single
+goroutine we can create a solo task using the `Go` or `Run` functions:
 
 ```go
-var data []byte
 s := taskgroup.Go(func() error {
-  f, err := os.Open(filePath)
-  if err != nil {
-     return err
-  }
-  defer f.Close()
-  data, err = io.ReadAll(f)
-  return err
+    for _, v := range itemsToClean {
+        if err := cleanup(v); err != nil {
+            return err
+        }
+    }
+    return nil
 })
 ```
 
-When we're ready, we call `Wait` to receive the result of the task:
+Once we're ready, we can `Wait` for this task to collect its result:
 
 ```go
 if err := s.Wait(); err != nil {
-   log.Fatalf("Loading config failed: %v", err)
+    log.Printf("WARNING: Cleanup failed: %v", err)
+}
+```
+
+Solo tasks are also helpful for functions that return a value. For example,
+suppose we want to read a file while we handle other matters. The `Call`
+function creates a solo task from such a function:
+
+```go
+s := taskgroup.Call(func() ([]byte, error) {
+    return os.ReadFile(filePath)
+})
+```
+
+As before, we can `Wait` for the result when we're ready:
+
+```go
+// N.B.: Wait returns a taskgroup.Result, whose Get method unpacks
+// it into a value and an error like a normal function call.
+data, err := s.Wait().Get()
+if err != nil {
+    log.Fatalf("Read configuration: %v", err)
 }
 doThingsWith(data)
 ```
