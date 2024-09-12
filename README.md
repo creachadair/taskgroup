@@ -12,6 +12,15 @@ for common concurrent tasks.
 
 Here is a [working example in the Go Playground](https://go.dev/play/p/wCZzMDXRUuM).
 
+## Contents
+
+- [Rationale](#rationale)
+- [Overview](#overview)
+- [Filtering Errors](#filtering-errors)
+- [Controlling Concurrency](#controlling-concurrency)
+- [Solo Tasks](#solo-tasks)
+- [Collecting Results](#collecting-results)
+
 ## Rationale
 
 Go provides powerful concurrency primitives, including
@@ -171,6 +180,8 @@ goroutine so it is safe to manipulate local resources without a lock.
 A group does not directly support cancellation, but integrates cleanly with the
 standard [context](https://godoc.org/context) package. A `context.CancelFunc`
 can be used as a trigger to signal the whole group when an error occurs.
+
+## Overview
 
 A task is expressed as a `func() error`, and is added to a group using the `Go`
 method:
