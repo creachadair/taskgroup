@@ -305,9 +305,9 @@ doThingsWith(data)
 ## Collecting Results
 
 One common use for a background task is accumulating the results from a batch
-of concurrent workers. This can be handled by a solo task, as described above,
-and it is a common enough case that the library provides a `Collector` type to
-handle it specifically.
+of concurrent workers. This could be handled by a solo task, as described
+above, but it is a common enough pattern that the library provides a
+`Collector` type to handle it specifically.
 
 To use it, pass a function to `Collect` to receive the values:
 
@@ -316,27 +316,44 @@ var sum int
 c := taskgroup.Collect(func(v int) { sum += v })
 ```
 
-The `Call`, `Run`, and `Report` methods of `c` wrap a function that yields a
-value into a task. If the function reports an error, that error is returned
-from the task as usual. Otherwise, its non-error value is given to the
-accumulator callback. As in the above example, calls to the function are
-serialized so that it is safe to access state without additional locking:
+The `Call`, `Run`, and `Report` methods of `c` can now be used to wrap
+functions that yield values, to deliver those values to `c`:
+
+- `c.Call` takes a `func() (T, error)`, returning a value and an error.
+- `c.Run` takes a `func() T`, returning only a value.
+
+If the wrapped function reports an error, that error is returned from the task
+as usual. Otherwise, its non-error value is given to the accumulator callback.
+As in the above example, calls to the function are serialized so that it is
+safe to access state without additional locking:
 
 ```go
-// Report an error, no value for the collector.
+var g taskgroup.Group
+// ...
+
+// Report an error, no value is sent to the collector.
 g.Go(c.Call(func() (int, error) {
     return -1, errors.New("bad")
 }))
 
-// Report the value 25 to the collector.
+// No error, send the value 25 to the collector.
 g.Go(c.Call(func() (int, error) {
     return 25, nil
 }))
 
-// Report a random integer to the collector.
+// Send a random integer to the collector.
 g.Go(c.Run(func() int { return rand.Intn(1000) })
+```
 
-// Report multiple values to the collector.
+The `Report` method allows a task to report _multiple_ values to the collector
+via a callback. Here, the function returns only an `error`, but it receives a
+callback it may invoke any number of times to send values:
+
+```go
+// Send the values 10, 20, and 30 to the collector.
+//
+// Note that even if the function reports an error, any values it sent to
+// the collector before returning are still delivered.
 g.Go(c.Report(func(report func(int)) error {
     report(10)
     report(20)
