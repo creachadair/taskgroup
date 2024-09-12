@@ -207,6 +207,19 @@ g := taskgroup.New(func(err error) error {
 })
 ```
 
+This mechanism can also be used to trigger a context cancellation if a task
+fails, for example:
+
+```go
+ctx, cancel := context.WithCancel(context.Background())
+defer cancel()
+
+g := taskgroup.New(taskgroup.Trigger(cancel))
+```
+
+Now, if a task in `g` reports an error, it will cancel the context, allowing
+any other running tasks to observe a context cancellation and bail out.
+
 ## Controlling Concurrency
 
 The `Limit` method supports limiting the number of concurrently _active_
