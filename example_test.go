@@ -42,8 +42,7 @@ func ExampleTrigger() {
 	// Construct a group in which any task error cancels the context.
 	g := taskgroup.New(taskgroup.Trigger(cancel))
 
-	for i := 0; i < 10; i++ {
-		i := i
+	for i := range 10 {
 		g.Go(func() error {
 			if i == badTask {
 				return fmt.Errorf("task %d failed", i)
@@ -90,7 +89,7 @@ func ExampleGroup_Limit() {
 	var p peakValue
 
 	g, start := taskgroup.New(nil).Limit(4)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		start(func() error {
 			p.inc()
 			defer p.dec()
@@ -116,7 +115,7 @@ func (s *slowReader) Read(data []byte) (int, error) {
 	time.Sleep(s.d)
 	nr := min(len(data), s.n)
 	s.n -= nr
-	for i := 0; i < nr; i++ {
+	for i := range nr {
 		data[i] = 'x'
 	}
 	return nr, nil

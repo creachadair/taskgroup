@@ -80,7 +80,7 @@ func TestCancellation(t *testing.T) {
 	errOther := errors.New("something is wrong")
 	ctx, cancel := context.WithCancel(context.Background())
 	var numOK int32
-	for i := 0; i < numTasks; i++ {
+	for range numTasks {
 		g.Go(func() error {
 			select {
 			case <-ctx.Done():
