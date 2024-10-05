@@ -40,7 +40,7 @@ func ExampleTrigger() {
 	const badTask = 5
 
 	// Construct a group in which any task error cancels the context.
-	g := taskgroup.New(taskgroup.Trigger(cancel))
+	g := taskgroup.New(cancel)
 
 	for i := range 10 {
 		g.Go(func() error {
@@ -67,10 +67,11 @@ func ExampleTrigger() {
 func ExampleListen() {
 	// The taskgroup itself will only report the first non-nil task error, but
 	// you can use an error listener used to accumulate all of them.
+	// Calls to the listener are synchronized, so we don't need a lock.
 	var all []error
-	g := taskgroup.New(taskgroup.Listen(func(e error) {
+	g := taskgroup.New(func(e error) {
 		all = append(all, e)
-	}))
+	})
 	g.Go(func() error { return errors.New("badness 1") })
 	g.Go(func() error { return errors.New("badness 2") })
 	g.Go(func() error { return errors.New("badness 3") })
