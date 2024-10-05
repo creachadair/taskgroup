@@ -187,24 +187,24 @@ func ExampleCollector_Report() {
 	}
 	c := taskgroup.Collect(func(z val) { fmt.Println(z.who, z.v) })
 
-	err := taskgroup.New(nil).
-		// The Report method passes its argument a function to report multiple
-		// values to the collector.
-		Go(c.Report(func(report func(v val)) error {
-			for i := range 3 {
-				report(val{"even", 2 * i})
-			}
-			return nil
-		})).
-		// Multiple reporters are fine.
-		Go(c.Report(func(report func(v val)) error {
-			for i := range 3 {
-				report(val{"odd", 2*i + 1})
-			}
-			// An error from a reporter is propagated like any other task error.
-			return errors.New("no bueno")
-		})).
-		Wait()
+	g := taskgroup.New(nil)
+	// The Report method passes its argument a function to report multiple
+	// values to the collector.
+	g.Go(c.Report(func(report func(v val)) error {
+		for i := range 3 {
+			report(val{"even", 2 * i})
+		}
+		return nil
+	}))
+	// Multiple reporters are fine.
+	g.Go(c.Report(func(report func(v val)) error {
+		for i := range 3 {
+			report(val{"odd", 2*i + 1})
+		}
+		// An error from a reporter is propagated like any other task error.
+		return errors.New("no bueno")
+	}))
+	err := g.Wait()
 	if err == nil || err.Error() != "no bueno" {
 		log.Fatalf("Unexpected error: %v", err)
 	}

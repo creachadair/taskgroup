@@ -30,7 +30,8 @@ func TestBasic(t *testing.T) {
 	t.Logf("Group value is %d bytes", reflect.TypeOf((*taskgroup.Group)(nil)).Elem().Size())
 
 	// Verify that the group works at all.
-	g := taskgroup.New(nil).Go(busyWork(25, nil))
+	g := taskgroup.New(nil)
+	g.Go(busyWork(25, nil))
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected task error: %v", err)
 	}
@@ -61,7 +62,8 @@ func TestErrorPropagation(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	var errBogus = errors.New("bogus")
-	g := taskgroup.New(nil).Go(func() error { return errBogus })
+	var g taskgroup.Group
+	g.Go(func() error { return errBogus })
 	if err := g.Wait(); err != errBogus {
 		t.Errorf("Wait: got error %v, wanted %v", err, errBogus)
 	}
@@ -152,7 +154,8 @@ func TestCapacity(t *testing.T) {
 func TestRegression(t *testing.T) {
 	t.Run("WaitRace", func(t *testing.T) {
 		ready := make(chan struct{})
-		g := taskgroup.New(nil).Go(func() error {
+		g := taskgroup.New(nil)
+		g.Go(func() error {
 			<-ready
 			return nil
 		})
@@ -205,7 +208,8 @@ func TestSingleTask(t *testing.T) {
 			return <-release
 		})
 
-		g := taskgroup.New(nil).Run(func() {
+		g := taskgroup.New(nil)
+		g.Run(func() {
 			if err := s.Wait(); err != sentinel {
 				t.Errorf("Background Wait: got %v, want %v", err, sentinel)
 			}
@@ -309,7 +313,8 @@ func TestCollector_Report(t *testing.T) {
 	var sum int
 	c := taskgroup.Collect(func(v int) { sum += v })
 
-	g := taskgroup.New(nil).Go(c.Report(func(report func(v int)) error {
+	var g taskgroup.Group
+	g.Go(c.Report(func(report func(v int)) error {
 		for _, v := range rand.Perm(10) {
 			report(v)
 		}
