@@ -1,5 +1,7 @@
 package taskgroup
 
+import "sync/atomic"
+
 // A Throttle rate-limits the number of concurrent goroutines that can execute
 // in parallel to some fixed number.  A zero Throttle is ready for use, but
 // imposes no limit on parallel execution. See [Throttle.Enter] for use.
@@ -23,18 +25,17 @@ func (t Throttle) Enter() Leaver {
 		return func() {}
 	}
 	t.adm <- struct{}{}
-	var done bool
+	var done atomic.Bool
 	return func() {
-		if !done {
-			done = true
+		if done.CompareAndSwap(false, true) {
 			<-t.adm
 		}
 	}
 }
 
 // A Leaver returns an in-use throttle slot to its underlying [Throttle].
-// It is safe to call a Leaver multiple times, provided it is not called
-// concurrently by multiple goroutines.
+// It is safe to call a Leaver multiple times; the slot will only be returned
+// once.
 type Leaver func()
 
 // Leave returns the slot to its [Throttle]. This is a legibility alias for
