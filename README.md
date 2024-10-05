@@ -187,7 +187,8 @@ A task is expressed as a `func() error`, and is added to a group using the `Go`
 method:
 
 ```go
-g := taskgroup.New(nil).Go(myTask)
+var g taskgroup.Group
+g.Go(myTask)
 ```
 
 Any number of tasks may be added, and it is safe to do so from multiple
