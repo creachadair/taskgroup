@@ -22,8 +22,7 @@ type Task func() error
 // non-nil error reported by any task (and not otherwise filtered) is returned
 // from the Wait method.
 type Group struct {
-	wg      sync.WaitGroup // counter for active goroutines
-	onError ErrorFunc      // called each time a task returns non-nil
+	wg sync.WaitGroup // counter for active goroutines
 
 	// active is nonzero when the group is "active", meaning there has been at
 	// least one call to Go since the group was created or the last Wait.
@@ -32,8 +31,9 @@ type Group struct {
 	// path reads active and only acquires μ if it discovers setup is needed.
 	active atomic.Uint32
 
-	μ   sync.Mutex // guards err
-	err error      // error returned from Wait
+	μ       sync.Mutex // guards err
+	err     error      // error returned from Wait
+	onError ErrorFunc  // called each time a task returns non-nil
 }
 
 // activate resets the state of the group and marks it as active.  This is
@@ -47,13 +47,25 @@ func (g *Group) activate() {
 	}
 }
 
-// New constructs a new empty group.  If ef != nil, it is called for each error
-// reported by a task running in the group.  The value returned by ef replaces
-// the task's error. If ef == nil, errors are not filtered.
+// New constructs a new empty group with the specified error filter.
+// See [Group.OnError] for a description of how errors are filtered.
+// If ef == nil, no filtering is performed.
+func New(ef ErrorFunc) *Group { return new(Group).OnError(ef) }
+
+// OnError sets the error filter for g. If ef == nil, the error filter is
+// removed and errors are no longer filtered. Otherwise, each non-nil error
+// reported by a task running in g is passed to ef, and the value it returns
+// replaces the task's error.
 //
-// Calls to ef are issued by a single goroutine, so it is safe for ef to
-// manipulate local data structures without additional locking.
-func New(ef ErrorFunc) *Group { return &Group{onError: ef} }
+// Calls to ef are synchronized so that it is safe for ef to manipulate local
+// data structures without additional locking. It is safe to call OnError while
+// tasks are active in g.
+func (g *Group) OnError(ef ErrorFunc) *Group {
+	g.μ.Lock()
+	defer g.μ.Unlock()
+	g.onError = ef
+	return g
+}
 
 // Go runs task in a new goroutine in g.
 func (g *Group) Go(task Task) {
