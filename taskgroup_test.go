@@ -3,6 +3,7 @@ package taskgroup_test
 import (
 	"context"
 	"errors"
+	"math"
 	"math/rand/v2"
 	"reflect"
 	"sync"
@@ -334,6 +335,75 @@ func TestCollector_Report(t *testing.T) {
 	if want := (9 * 10) / 2; sum != want {
 		t.Errorf("Final result: got %d, want %d", sum, want)
 	}
+}
+
+func TestGatherer(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	g, run := taskgroup.New(nil).Limit(4)
+	checkWait := func(t *testing.T) {
+		t.Helper()
+		if err := g.Wait(); err != nil {
+			t.Errorf("Unexpected error from Wait: %v", err)
+		}
+	}
+
+	t.Run("Call", func(t *testing.T) {
+		var sum int
+		r := taskgroup.Gather(run, func(v int) {
+			sum += v
+		})
+
+		for _, v := range rand.Perm(15) {
+			r.Call(func() (int, error) {
+				if v > 10 {
+					return -100, errors.New("don't add this")
+				}
+				return v, nil
+			})
+		}
+
+		g.Wait()
+		if want := (10 * 11) / 2; sum != want {
+			t.Errorf("Final result: got %d, want %d", sum, want)
+		}
+	})
+
+	t.Run("Run", func(t *testing.T) {
+		var sum int
+		r := taskgroup.Gather(run, func(v int) {
+			sum += v
+		})
+		for _, v := range rand.Perm(15) {
+			r.Run(func() int { return v + 1 })
+		}
+
+		checkWait(t)
+		if want := (15 * 16) / 2; sum != want {
+			t.Errorf("Final result: got %d, want %d", sum, want)
+		}
+	})
+
+	t.Run("Report", func(t *testing.T) {
+		var sum uint32
+		r := taskgroup.Gather(g.Go, func(v uint32) {
+			sum |= v
+		})
+
+		for _, i := range rand.Perm(32) {
+			r.Report(func(report func(v uint32)) error {
+				for _, v := range rand.Perm(i + 1) {
+					report(uint32(1 << v))
+				}
+				return nil
+			})
+		}
+
+		checkWait(t)
+		if sum != math.MaxUint32 {
+			t.Errorf("Final result: got %d, want %d", sum, math.MaxUint32)
+		}
+	})
 }
 
 type peakValue struct {
