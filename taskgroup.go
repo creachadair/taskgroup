@@ -131,24 +131,17 @@ func Listen(f func(error)) ErrorFunc { return func(e error) error { f(e); return
 // NoError adapts f to a Task that executes f and reports a nil error.
 func NoError(f func()) Task { return func() error { f(); return nil } }
 
-// Limit returns g and a function that starts each task passed to it in g,
-// allowing no more than n tasks to be active concurrently.  If n ≤ 0, the
-// start function is equivalent to g.Go, which enforces no limit.
+// Limit returns g and a "start" function that starts each task passed to it in
+// g, allowing no more than n tasks to be active concurrently. If n ≤ 0, no
+// limit is enforced.
 //
 // The limiting mechanism is optional, and the underlying group is not
 // restricted. A call to the start function will block until a slot is
 // available, but calling g.Go directly will add a task unconditionally and
 // will not take up a limiter slot.
-func (g *Group) Limit(n int) (*Group, func(Task) *Group) {
-	if n <= 0 {
-		return g, g.Go
-	}
-	adm := make(chan struct{}, n)
-	return g, func(task Task) *Group {
-		adm <- struct{}{}
-		return g.Go(func() error {
-			defer func() { <-adm }()
-			return task()
-		})
-	}
-}
+//
+// This is a shorthand for constructing a [Throttle] with capacity n and
+// calling its Limit method.  If n ≤ 0, the start function is equivalent to
+// g.Go, which enforces no limit. To share a throttle among multiple groups,
+// construct the throttle separately.
+func (g *Group) Limit(n int) (*Group, func(Task)) { t := NewThrottle(n); return g, t.Limit(g) }

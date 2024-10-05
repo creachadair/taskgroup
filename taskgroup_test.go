@@ -116,11 +116,21 @@ func TestCapacity(t *testing.T) {
 
 	const maxCapacity = 25
 	const numTasks = 1492
-	g, start := taskgroup.New(nil).Limit(maxCapacity)
+
+	// Verify that multiple groups sharing a throttle respect the combined
+	// capacity limit.
+	throttle := taskgroup.NewThrottle(maxCapacity)
+	var g1, g2 taskgroup.Group
+	start1 := throttle.Limit(&g1)
+	start2 := throttle.Limit(&g2)
 
 	var p peakValue
 	var n int32
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
+		start := start1
+		if i%2 == 1 {
+			start = start2
+		}
 		start(func() error {
 			p.inc()
 			defer p.dec()
@@ -129,7 +139,8 @@ func TestCapacity(t *testing.T) {
 			return nil
 		})
 	}
-	g.Wait()
+	g1.Wait()
+	g2.Wait()
 	t.Logf("Total tasks completed: %d", n)
 	if p.max > maxCapacity {
 		t.Errorf("Exceeded maximum capacity: got %d, want %d", p.max, maxCapacity)
