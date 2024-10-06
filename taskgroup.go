@@ -54,12 +54,6 @@ func (g *Group) activate() {
 // If ef == nil, no filtering is performed.
 func New(ef any) *Group { return new(Group).OnError(ef) }
 
-var (
-	triggerType = reflect.TypeOf(func() {})
-	listenType  = reflect.TypeOf(func(error) {})
-	filterType  = reflect.TypeOf(func(error) error { return nil })
-)
-
 // OnError sets the error filter for g. If ef == nil, the error filter is
 // removed and errors are no longer filtered. Otherwise, each non-nil error
 // reported by a task running in g is passed to ef.
@@ -91,21 +85,7 @@ var (
 // data structures without additional locking. It is safe to call OnError while
 // tasks are active in g.
 func (g *Group) OnError(ef any) *Group {
-	var filter errorFunc
-	v := reflect.ValueOf(ef)
-	if !v.IsValid() {
-		// OK, ef == nil, nothing to do
-	} else if t := v.Type(); t.ConvertibleTo(triggerType) {
-		f := v.Convert(triggerType).Interface().(func())
-		filter = func(err error) error { f(); return err }
-	} else if t.ConvertibleTo(listenType) {
-		f := v.Convert(listenType).Interface().(func(error))
-		filter = func(err error) error { f(err); return err }
-	} else if t.ConvertibleTo(filterType) {
-		filter = errorFunc(v.Convert(filterType).Interface().(func(error) error))
-	} else {
-		panic(fmt.Sprintf("unsupported filter type %T", ef))
-	}
+	filter := adaptErrorFunc(ef)
 	g.μ.Lock()
 	defer g.μ.Unlock()
 	g.onError = filter
@@ -174,6 +154,30 @@ func (ef errorFunc) filter(err error) error {
 		return err
 	}
 	return ef(err)
+}
+
+var (
+	triggerType = reflect.TypeOf(func() {})
+	listenType  = reflect.TypeOf(func(error) {})
+	filterType  = reflect.TypeOf(func(error) error { return nil })
+)
+
+func adaptErrorFunc(ef any) errorFunc {
+	v := reflect.ValueOf(ef)
+	if !v.IsValid() {
+		// OK, ef == nil, nothing to do
+		return nil
+	} else if t := v.Type(); t.ConvertibleTo(triggerType) {
+		f := v.Convert(triggerType).Interface().(func())
+		return func(err error) error { f(); return err }
+	} else if t.ConvertibleTo(listenType) {
+		f := v.Convert(listenType).Interface().(func(error))
+		return func(err error) error { f(err); return err }
+	} else if t.ConvertibleTo(filterType) {
+		return errorFunc(v.Convert(filterType).Interface().(func(error) error))
+	} else {
+		panic(fmt.Sprintf("unsupported filter type %T", ef))
+	}
 }
 
 // Trigger creates an OnError callback that calls f each time a task reports an
