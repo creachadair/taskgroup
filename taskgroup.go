@@ -106,11 +106,9 @@ func (g *Group) Go(task Task) {
 	}()
 }
 
-// Run runs task in a new goroutine in g, and returns g to permit chaining.
-// This is shorthand for:
-//
-//	g.Go(taskgroup.NoError(task))
-func (g *Group) Run(task func()) { g.Go(NoError(task)) }
+// Run runs task in a new goroutine in g.
+// The resulting task reports a nil error.
+func (g *Group) Run(task func()) { g.Go(noError(task)) }
 
 func (g *Group) handleError(err error) {
 	g.μ.Lock()
@@ -194,6 +192,8 @@ func Listen(f func(error)) any { return f }
 
 // NoError adapts f to a Task that executes f and reports a nil error.
 func NoError(f func()) Task { return func() error { f(); return nil } }
+
+func noError(f func()) Task { return func() error { f(); return nil } }
 
 // Limit returns g and a "start" function that starts each task passed to it in
 // g, allowing no more than n tasks to be active concurrently. If n ≤ 0, no
