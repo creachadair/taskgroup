@@ -37,7 +37,7 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	g, start := taskgroup.New(taskgroup.Trigger(cancel)).Limit(*maxWorkers)
+	g, start := taskgroup.New(cancel).Limit(*maxWorkers)
 
 	err := filepath.Walk(*srcPath, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
