@@ -30,7 +30,7 @@ func TestBasic(t *testing.T) {
 	t.Logf("Group value is %d bytes", reflect.TypeOf((*taskgroup.Group)(nil)).Elem().Size())
 
 	// Verify that the group works at all.
-	g := taskgroup.New(nil)
+	var g taskgroup.Group
 	g.Go(busyWork(25, nil))
 	if err := g.Wait(); err != nil {
 		t.Errorf("Unexpected task error: %v", err)
@@ -44,7 +44,7 @@ func TestBasic(t *testing.T) {
 	}
 
 	t.Run("Zero", func(t *testing.T) {
-		var g taskgroup.Group
+		g := taskgroup.New(nil)
 		g.Go(busyWork(30, nil))
 		if err := g.Wait(); err != nil {
 			t.Errorf("Unexpected task error: %v", err)
@@ -62,10 +62,17 @@ func TestErrorPropagation(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	var errBogus = errors.New("bogus")
+
 	var g taskgroup.Group
 	g.Go(func() error { return errBogus })
 	if err := g.Wait(); err != errBogus {
 		t.Errorf("Wait: got error %v, wanted %v", err, errBogus)
+	}
+
+	g.OnError(func(error) error { return nil }) // discard
+	g.Go(func() error { return errBogus })
+	if err := g.Wait(); err != nil {
+		t.Errorf("Wait: got error %v, wanted nil", err)
 	}
 }
 
@@ -154,7 +161,7 @@ func TestCapacity(t *testing.T) {
 func TestRegression(t *testing.T) {
 	t.Run("WaitRace", func(t *testing.T) {
 		ready := make(chan struct{})
-		g := taskgroup.New(nil)
+		var g taskgroup.Group
 		g.Go(func() error {
 			<-ready
 			return nil
@@ -174,7 +181,7 @@ func TestRegression(t *testing.T) {
 				t.Errorf("Unexpected panic: %v", x)
 			}
 		}()
-		g := taskgroup.New(nil)
+		var g taskgroup.Group
 		g.Wait()
 	})
 }
@@ -208,7 +215,7 @@ func TestSingleTask(t *testing.T) {
 			return <-release
 		})
 
-		g := taskgroup.New(nil)
+		var g taskgroup.Group
 		g.Run(func() {
 			if err := s.Wait(); err != sentinel {
 				t.Errorf("Background Wait: got %v, want %v", err, sentinel)
@@ -231,7 +238,7 @@ func TestWaitMoreTasks(t *testing.T) {
 		results++
 	})
 
-	g := taskgroup.New(nil)
+	var g taskgroup.Group
 
 	// Test that if a task spawns more tasks on its own recognizance, waiting
 	// correctly waits for all of them provided we do not let the group go empty
@@ -283,7 +290,7 @@ func TestCollector(t *testing.T) {
 	c := taskgroup.Collect(func(v int) { sum += v })
 
 	vs := rand.Perm(15)
-	g := taskgroup.New(nil)
+	var g taskgroup.Group
 
 	for i, v := range vs {
 		v := v
