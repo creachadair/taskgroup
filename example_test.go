@@ -148,27 +148,28 @@ func ExampleSingle() {
 	// 2500 bytes
 }
 
-func ExampleCollector() {
-	var total int
-	c := taskgroup.Collect(func(v int) {
-		total += v
-	})
-
+func ExampleGatherer() {
 	const numTasks = 25
 	input := rand.Perm(500)
 
 	// Start a bunch of tasks to find elements in the input...
 	g := taskgroup.New(nil)
+
+	var total int
+	c := taskgroup.Gather(g.Go, func(v int) {
+		total += v
+	})
+
 	for i := range numTasks {
 		target := i + 1
-		g.Go(c.Call(func() (int, error) {
+		c.Call(func() (int, error) {
 			for _, v := range input {
 				if v == target {
 					return v, nil
 				}
 			}
 			return 0, errors.New("not found")
-		}))
+		})
 	}
 
 	// Wait for the searchers to finish, then signal the collector to stop.
@@ -180,30 +181,33 @@ func ExampleCollector() {
 	// 325
 }
 
-func ExampleCollector_Report() {
+func ExampleGatherer_Report() {
 	type val struct {
 		who string
 		v   int
 	}
-	c := taskgroup.Collect(func(z val) { fmt.Println(z.who, z.v) })
 
 	g := taskgroup.New(nil)
+	c := taskgroup.Gather(g.Go, func(z val) {
+		fmt.Println(z.who, z.v)
+	})
+
 	// The Report method passes its argument a function to report multiple
 	// values to the collector.
-	g.Go(c.Report(func(report func(v val)) error {
+	c.Report(func(report func(v val)) error {
 		for i := range 3 {
 			report(val{"even", 2 * i})
 		}
 		return nil
-	}))
+	})
 	// Multiple reporters are fine.
-	g.Go(c.Report(func(report func(v val)) error {
+	c.Report(func(report func(v val)) error {
 		for i := range 3 {
 			report(val{"odd", 2*i + 1})
 		}
 		// An error from a reporter is propagated like any other task error.
 		return errors.New("no bueno")
-	}))
+	})
 	err := g.Wait()
 	if err == nil || err.Error() != "no bueno" {
 		log.Fatalf("Unexpected error: %v", err)

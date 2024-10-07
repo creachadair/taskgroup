@@ -234,12 +234,11 @@ func TestSingleTask(t *testing.T) {
 func TestWaitMoreTasks(t *testing.T) {
 	defer leaktest.Check(t)()
 
+	var g taskgroup.Group
 	var results int
-	coll := taskgroup.Collect(func(int) {
+	coll := taskgroup.Gather(g.Go, func(int) {
 		results++
 	})
-
-	var g taskgroup.Group
 
 	// Test that if a task spawns more tasks on its own recognizance, waiting
 	// correctly waits for all of them provided we do not let the group go empty
@@ -249,14 +248,14 @@ func TestWaitMoreTasks(t *testing.T) {
 		if n > 1 {
 			// The subordinate task, if there is one, is started before this one
 			// exits, ensuring the group is kept "afloat".
-			g.Go(coll.Run(func() int {
+			coll.Run(func() int {
 				return countdown(n - 1)
-			}))
+			})
 		}
 		return n
 	}
 
-	g.Go(coll.Run(func() int { return countdown(15) }))
+	coll.Run(func() int { return countdown(15) })
 	g.Wait()
 
 	if results != 15 {
@@ -281,59 +280,6 @@ func TestSingleResult(t *testing.T) {
 	}
 	if res != 25 {
 		t.Errorf("Result: got %v, want 25", res)
-	}
-}
-
-func TestCollector(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	var sum int
-	c := taskgroup.Collect(func(v int) { sum += v })
-
-	vs := rand.Perm(15)
-	var g taskgroup.Group
-
-	for i, v := range vs {
-		v := v
-		if v > 10 {
-			// This value should not be accumulated.
-			g.Go(c.Call(func() (int, error) {
-				return -100, errors.New("don't add this")
-			}))
-		} else if i%2 == 0 {
-			// A function with an error.
-			g.Go(c.Call(func() (int, error) { return v, nil }))
-		} else {
-			// A function without an error.
-			g.Go(c.Run(func() int { return v }))
-		}
-	}
-	g.Wait() // wait for tasks to finish
-
-	if want := (10 * 11) / 2; sum != want {
-		t.Errorf("Final result: got %d, want %d", sum, want)
-	}
-}
-
-func TestCollector_Report(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	var sum int
-	c := taskgroup.Collect(func(v int) { sum += v })
-
-	var g taskgroup.Group
-	g.Go(c.Report(func(report func(v int)) error {
-		for _, v := range rand.Perm(10) {
-			report(v)
-		}
-		return nil
-	}))
-
-	if err := g.Wait(); err != nil {
-		t.Errorf("Unexpected error from group: %v", err)
-	}
-	if want := (9 * 10) / 2; sum != want {
-		t.Errorf("Final result: got %d, want %d", sum, want)
 	}
 }
 
