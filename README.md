@@ -226,7 +226,7 @@ fails, for example:
 ctx, cancel := context.WithCancel(context.Background())
 defer cancel()
 
-g := taskgroup.New(taskgroup.Trigger(cancel))
+g := taskgroup.New(cancel)
 ```
 
 Now, if a task in `g` reports an error, it will cancel the context, allowing
