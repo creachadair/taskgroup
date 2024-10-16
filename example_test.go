@@ -33,7 +33,7 @@ func ExampleGroup() {
 	// <done>
 }
 
-func ExampleTrigger() {
+func ExampleNew_cancel() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -64,7 +64,7 @@ func ExampleTrigger() {
 	// Output: task 5 failed
 }
 
-func ExampleListen() {
+func ExampleNew_listen() {
 	// The taskgroup itself will only report the first non-nil task error, but
 	// you can use an error listener used to accumulate all of them.
 	// Calls to the listener are synchronized, so we don't need a lock.

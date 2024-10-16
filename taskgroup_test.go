@@ -81,9 +81,9 @@ func TestCancellation(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	var errs []error
-	g := taskgroup.New(taskgroup.Listen(func(err error) {
+	g := taskgroup.New(func(err error) {
 		errs = append(errs, err)
-	}))
+	})
 
 	errOther := errors.New("something is wrong")
 	ctx, cancel := context.WithCancel(context.Background())

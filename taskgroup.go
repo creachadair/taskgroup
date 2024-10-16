@@ -178,18 +178,6 @@ func adaptErrorFunc(ef any) errorFunc {
 	}
 }
 
-// Trigger creates an OnError callback that calls f each time a task reports an
-// error.  The resulting callback returns task errors unmodified.
-//
-// Deprecated: Pass f directly to [New] or [Group.OnError].
-func Trigger(f func()) any { return f }
-
-// Listen creates an OnError callback that reports each non-nil task error to
-// f.  The resulting callback returns task errors unmodified.
-//
-// Deprecated: Pass f directly to [New] or [Group.OnError].
-func Listen(f func(error)) any { return f }
-
 // NoError adapts f to a Task that executes f and reports a nil error.
 func NoError(f func()) Task { return func() error { f(); return nil } }
 
