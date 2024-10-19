@@ -21,7 +21,7 @@ func (s *Single[T]) Wait() T {
 }
 
 // Go runs task in a new goroutine. The caller must call Wait to wait for the
-// task to return and collect its error.
+// task to return and collect its value.
 func Go[T any](task func() T) *Single[T] {
 	// N.B. This is closed by Wait.
 	valc := make(chan T, 1)
