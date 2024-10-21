@@ -259,7 +259,7 @@ func TestWaitMoreTasks(t *testing.T) {
 	g.Wait()
 
 	if results != 15 {
-		t.Errorf("Got %d results, want 10", results)
+		t.Errorf("Got %d results, want 15", results)
 	}
 }
 
