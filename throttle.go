@@ -4,7 +4,7 @@ import "sync/atomic"
 
 // A Throttle rate-limits the number of concurrent goroutines that can execute
 // in parallel to some fixed number.  A zero Throttle is ready for use, but
-// imposes no limit on parallel execution. See [Throttle.Enter] for use.
+// imposes no limit on parallel execution.
 type Throttle struct {
 	adm chan struct{}
 }
@@ -18,8 +18,8 @@ func NewThrottle(n int) Throttle {
 	return Throttle{adm: make(chan struct{}, n)}
 }
 
-// enter blocks until a slot is available in t, then returns a [Leaver] that
-// the caller must execute to return the slot when it is no longer in use.
+// enter blocks until a slot is available in t, then returns a leaver that the
+// caller must execute to return the slot when it is no longer in use.
 func (t Throttle) enter() leaver {
 	if t.adm == nil {
 		return func() {}

@@ -1,7 +1,7 @@
 // Package taskgroup manages collections of cooperating goroutines.
-// It defines a Group that handles waiting for goroutine termination and the
-// propagation of error values. The caller may provide a callback to filter
-// and respond to task errors.
+// It defines a [Group] that handles waiting for goroutine termination and the
+// propagation of error values. The caller may provide a callback to filter and
+// respond to task errors.
 package taskgroup
 
 import (
@@ -11,14 +11,14 @@ import (
 	"sync/atomic"
 )
 
-// A Task function is the basic unit of work in a Group. Errors reported by
+// A Task function is the basic unit of work in a [Group]. Errors reported by
 // tasks are collected and reported by the group.
 type Task func() error
 
 // A Group manages a collection of cooperating goroutines.  Add new tasks to
-// the group with the Go method.  Call the Wait method to wait for the tasks to
-// complete. A zero value is ready for use, but must not be copied after its
-// first use.
+// the group with [Group.Go] and [Group.Run].  Call [Group.Wait] to wait for
+// the tasks to complete. A zero value is ready for use, but must not be copied
+// after its first use.
 //
 // The group collects any errors returned by the tasks in the group. The first
 // non-nil error reported by any task (and not otherwise filtered) is returned
@@ -124,7 +124,7 @@ func (g *Group) handleError(err error) {
 // returns the first non-nil error reported by any of the goroutines in the
 // group and not filtered by an OnError callback.
 //
-// As with sync.WaitGroup, new tasks can be added to g during a call to Wait
+// As with [sync.WaitGroup], new tasks can be added to g during a call to Wait
 // only if the group contains at least one active task when Wait is called and
 // continuously thereafter until the last concurrent call to g.Go returns.
 //
