@@ -18,9 +18,9 @@ func NewThrottle(n int) Throttle {
 	return Throttle{adm: make(chan struct{}, n)}
 }
 
-// enter blocks until a slot is available in t, then returns a leaver that the
+// enter blocks until a slot is available in t, then returns a func that the
 // caller must execute to return the slot when it is no longer in use.
-func (t Throttle) enter() leaver {
+func (t Throttle) enter() func() {
 	if t.adm == nil {
 		return func() {}
 	}
@@ -33,23 +33,14 @@ func (t Throttle) enter() leaver {
 	}
 }
 
-// A leaver returns an in-use throttle slot to its underlying [Throttle].
-// It is safe to call a Leaver multiple times; the slot will only be returned
-// once.
-type leaver func()
-
-// Leave returns the slot to its [Throttle]. This is a legibility alias for
-// calling f.
-func (f leaver) Leave() { f() }
-
 // Limit returns a function that starts each [Task] passed to it in g,
 // respecting the rate limit imposed by t. Each call to Limit yields a fresh
 // start function, and all the functions returned share the capacity of t.
 func (t Throttle) Limit(g *Group) func(Task) {
 	return func(task Task) {
-		slot := t.enter()
+		release := t.enter()
 		g.Go(func() error {
-			defer slot.Leave()
+			defer release()
 			return task()
 		})
 	}
