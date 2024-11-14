@@ -183,9 +183,9 @@ func NoError(f func()) Task { return func() error { f(); return nil } }
 
 func noError(f func()) Task { return func() error { f(); return nil } }
 
-// Limit returns g and a "start" function that starts each task passed to it in
-// g, allowing no more than n tasks to be active concurrently. If n ≤ 0, no
-// limit is enforced.
+// Limit returns g and a [StartFunc] that starts each task passed to it in g,
+// allowing no more than n tasks to be active concurrently. If n ≤ 0, no limit
+// is enforced.
 //
 // The limiting mechanism is optional, and the underlying group is not
 // restricted. A call to the start function will block until a slot is
@@ -196,4 +196,4 @@ func noError(f func()) Task { return func() error { f(); return nil } }
 // calling its Limit method.  If n ≤ 0, the start function is equivalent to
 // g.Go, which enforces no limit. To share a throttle among multiple groups,
 // construct the throttle separately.
-func (g *Group) Limit(n int) (*Group, func(Task)) { t := NewThrottle(n); return g, t.Limit(g) }
+func (g *Group) Limit(n int) (*Group, StartFunc) { t := NewThrottle(n); return g, t.Limit(g) }

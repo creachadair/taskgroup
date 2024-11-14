@@ -91,11 +91,10 @@ func ExampleGroup_Limit() {
 
 	g, start := taskgroup.New(nil).Limit(4)
 	for range 100 {
-		start(func() error {
+		start.Run(func() {
 			p.inc()
 			defer p.dec()
 			time.Sleep(1 * time.Microsecond)
-			return nil
 		})
 	}
 	g.Wait()

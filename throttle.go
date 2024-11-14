@@ -36,7 +36,7 @@ func (t Throttle) enter() func() {
 // Limit returns a function that starts each [Task] passed to it in g,
 // respecting the rate limit imposed by t. Each call to Limit yields a fresh
 // start function, and all the functions returned share the capacity of t.
-func (t Throttle) Limit(g *Group) func(Task) {
+func (t Throttle) Limit(g *Group) StartFunc {
 	return func(task Task) {
 		release := t.enter()
 		g.Go(func() error {
@@ -45,3 +45,13 @@ func (t Throttle) Limit(g *Group) func(Task) {
 		})
 	}
 }
+
+// A StartFunc executes each [Task] passed to it in a [Group].
+type StartFunc func(Task)
+
+// Go is a legibility shorthand for calling s with task.
+func (s StartFunc) Go(task Task) { s(task) }
+
+// Run is a legibility shorthand for calling s with a task that runs f and
+// reports a nil error.
+func (s StartFunc) Run(f func()) { s(NoError(f)) }

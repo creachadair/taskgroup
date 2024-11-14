@@ -10,7 +10,7 @@ synchronously to a user-provided callback.  This does not replace the full
 generality of Go's built-in features, but it simplifies some of the plumbing
 for common concurrent tasks.
 
-Here is a [working example in the Go Playground](https://go.dev/play/p/wCZzMDXRUuM).
+Here is a [working example in the Go Playground](https://go.dev/play/p/miyrtp4PyOc).
 
 ## Contents
 
@@ -235,9 +235,9 @@ any other running tasks to observe a context cancellation and bail out.
 ## Controlling Concurrency
 
 The `Limit` method supports limiting the number of concurrently _active_
-goroutines in the group. It returns a `start` function that adds goroutines to
-the group, but will will block when the limit of goroutines is reached until
-some of the goroutines already running have finished.
+goroutines in the group. It returns a `StartFunc` that adds goroutines to the
+group, but will will block when the limit of goroutines is reached until some
+of the goroutines already running have finished.
 
 For example:
 

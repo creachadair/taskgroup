@@ -141,12 +141,11 @@ func TestCapacity(t *testing.T) {
 		if i%2 == 1 {
 			start = start2
 		}
-		start(func() error {
+		start.Run(func() {
 			p.inc()
 			defer p.dec()
 			time.Sleep(2 * time.Millisecond)
 			atomic.AddInt32(&n, 1)
-			return nil
 		})
 	}
 	g1.Wait()
