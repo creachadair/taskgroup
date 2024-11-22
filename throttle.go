@@ -54,4 +54,4 @@ func (s StartFunc) Go(task Task) { s(task) }
 
 // Run is a legibility shorthand for calling s with a task that runs f and
 // reports a nil error.
-func (s StartFunc) Run(f func()) { s(NoError(f)) }
+func (s StartFunc) Run(f func()) { s(noError(f)) }

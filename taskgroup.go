@@ -179,6 +179,8 @@ func adaptErrorFunc(ef any) errorFunc {
 }
 
 // NoError adapts f to a Task that executes f and reports a nil error.
+//
+// Deprecated: Use [Group.Run] or [taskgroup.Run] instead.
 func NoError(f func()) Task { return func() error { f(); return nil } }
 
 func noError(f func()) Task { return func() error { f(); return nil } }
