@@ -1,7 +1,5 @@
 package taskgroup
 
-import "sync/atomic"
-
 // A Throttle rate-limits the number of concurrent goroutines that can execute
 // in parallel to some fixed number.  A zero Throttle is ready for use, but
 // imposes no limit on parallel execution.
@@ -25,12 +23,7 @@ func (t Throttle) enter() func() {
 		return func() {}
 	}
 	t.adm <- struct{}{}
-	var done atomic.Bool
-	return func() {
-		if done.CompareAndSwap(false, true) {
-			<-t.adm
-		}
-	}
+	return func() { <-t.adm }
 }
 
 // Limit returns a function that starts each [Task] passed to it in g,
