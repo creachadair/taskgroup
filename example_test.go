@@ -171,7 +171,8 @@ func ExampleGatherer() {
 		})
 	}
 
-	// Wait for the searchers to finish, then signal the collector to stop.
+	// Wait for the searchers to finish.  Once they do, it is safe to access the
+	// state managed by the gatherer.
 	g.Wait()
 
 	// Now get the final result.
