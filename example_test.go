@@ -151,11 +151,13 @@ func ExampleGatherer() {
 	const numTasks = 25
 	input := rand.Perm(500)
 
-	// Start a bunch of tasks to find elements in the input...
-	g := taskgroup.New(nil)
+	// Start a bunch of tasks to find elements in the input.
+	g, start := taskgroup.New(nil).Limit(10)
 
+	// We can pass g.Go directly, or as in this example we can use a throttled
+	// start function.
 	var total int
-	c := taskgroup.Gather(g.Go, func(v int) {
+	c := taskgroup.Gather(start, func(v int) {
 		total += v
 	})
 
