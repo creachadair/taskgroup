@@ -228,6 +228,39 @@ func TestSingleTask(t *testing.T) {
 		}
 		g.Wait()
 	})
+
+	t.Run("MultipleWaiters", func(t *testing.T) {
+		// Here we want to verify that multiple concurrent waiters do not produce
+		// a data race.  We can get a false pass if the scheduler happens to
+		// sequence them just so, but any failure of this test is a true fail.
+
+		release := make(chan error)
+
+		s := taskgroup.Go(func() error {
+			return <-release
+		})
+
+		// Start multiple waiters, and wait for them to be running.
+		var ready sync.WaitGroup
+
+		const numWaiters = 4
+		ready.Add(numWaiters)
+		for i := range numWaiters {
+			go func() {
+				ready.Done()
+				if err := s.Wait(); err != sentinel {
+					t.Errorf("Wait %d: got %v, want %v", i+1, err, sentinel)
+				}
+			}()
+		}
+		ready.Wait()
+
+		// Ungate the goroutine and let the waiters race.
+		release <- sentinel
+		if err := s.Wait(); err != sentinel {
+			t.Errorf("Wait: got %v, want %v", err, sentinel)
+		}
+	})
 }
 
 func TestWaitMoreTasks(t *testing.T) {
