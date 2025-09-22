@@ -31,7 +31,7 @@ type Group struct {
 	//
 	// Together active and μ work as a kind of resettable sync.Once; the fast
 	// path reads active and only acquires μ if it discovers setup is needed.
-	active atomic.Uint32
+	active atomic.Bool
 
 	μ       sync.Mutex // guards the fields below
 	err     error      // error returned from Wait
@@ -43,9 +43,9 @@ type Group struct {
 func (g *Group) activate() {
 	g.μ.Lock()
 	defer g.μ.Unlock()
-	if g.active.Load() == 0 { // still inactive
+	if !g.active.Load() { // still inactive
 		g.err = nil
-		g.active.Store(1)
+		g.active.Store(true)
 	}
 }
 
@@ -95,7 +95,7 @@ func (g *Group) OnError(ef any) *Group {
 // Go runs task in a new goroutine in g.
 func (g *Group) Go(task Task) {
 	g.wg.Add(1)
-	if g.active.Load() == 0 {
+	if !g.active.Load() {
 		g.activate()
 	}
 	go func() {
@@ -136,8 +136,8 @@ func (g *Group) Wait() error {
 	defer g.μ.Unlock()
 
 	// If the group is still active, deactivate it now.
-	if g.active.Load() != 0 {
-		g.active.Store(0)
+	if g.active.Load() {
+		g.active.Store(false)
 	}
 	return g.err
 }
