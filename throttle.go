@@ -19,9 +19,6 @@ func NewThrottle(n int) Throttle {
 // enter blocks until a slot is available in t, then returns a func that the
 // caller must execute to return the slot when it is no longer in use.
 func (t Throttle) enter() func() {
-	if t.adm == nil {
-		return func() {}
-	}
 	t.adm <- struct{}{}
 	return func() { <-t.adm }
 }
@@ -30,6 +27,9 @@ func (t Throttle) enter() func() {
 // respecting the rate limit imposed by t. Each call to Limit yields a fresh
 // start function, and all the functions returned share the capacity of t.
 func (t Throttle) Limit(g *Group) StartFunc {
+	if t.adm == nil {
+		return g.Go
+	}
 	return func(task Task) {
 		release := t.enter()
 		g.Go(func() error {
