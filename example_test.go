@@ -223,3 +223,34 @@ func ExampleGatherer_Report() {
 	// even 4
 	// odd 5
 }
+
+func ExampleThrottle() {
+	var p peakValue
+
+	work := func() {
+		p.inc()
+		defer p.dec()
+		time.Sleep(time.Microsecond)
+	}
+
+	// Create a throttle with shared capacity among multiple groups.
+	t := taskgroup.NewThrottle(10)
+
+	var g1 taskgroup.Group
+	var g2 taskgroup.Group
+
+	// Start functions for all the calls to Limit share the capacity of t.
+	start1 := t.Limit(&g1)
+	start2 := t.Limit(&g2)
+
+	for range 100 {
+		start1.Run(work)
+		start2.Run(work)
+	}
+
+	g1.Wait()
+	g2.Wait()
+	fmt.Printf("Max active ≤ 10: %v\n", p.max <= 10)
+	// Output:
+	// Max active ≤ 10: true
+}
