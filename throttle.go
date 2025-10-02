@@ -16,13 +16,6 @@ func NewThrottle(n int) Throttle {
 	return Throttle{adm: make(chan struct{}, n)}
 }
 
-// enter blocks until a slot is available in t, then returns a func that the
-// caller must execute to return the slot when it is no longer in use.
-func (t Throttle) enter() func() {
-	t.adm <- struct{}{}
-	return func() { <-t.adm }
-}
-
 // Limit returns a function that starts each [Task] passed to it in g,
 // respecting the rate limit imposed by t. Each call to Limit yields a fresh
 // start function, and all the functions returned share the capacity of t.
@@ -31,9 +24,9 @@ func (t Throttle) Limit(g *Group) StartFunc {
 		return g.Go
 	}
 	return func(task Task) {
-		release := t.enter()
+		t.adm <- struct{}{} // wait for a semaphore slot
 		g.Go(func() error {
-			defer release()
+			defer func() { <-t.adm }() // yield a semaphore slot
 			return task()
 		})
 	}
