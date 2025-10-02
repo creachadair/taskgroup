@@ -61,7 +61,8 @@ func ExampleNew_cancel() {
 	} else {
 		fmt.Println(err.Error())
 	}
-	// Output: task 5 failed
+	// Output:
+	// task 5 failed
 }
 
 func ExampleNew_listen() {
