@@ -4,6 +4,20 @@ import "sync"
 
 // A Gatherer manages a group of [Task] functions that report values, and
 // gathers the values they return.
+//
+// Use [Gather] to construct a Gatherer that dispatches tasks to a group.
+// Thereafter, the methods of a gatherer adapt functions that report non-error
+// values to the [Task] interface.
+//
+// The following function signature schemes are supported:
+//
+//   - Use [Gatherer.Call] to collect the value from a func() (T, error)
+//   - Use [Gatherer.Run] to collect the value from a func() T
+//   - Use [Gatherer.Report] to collect values using a callback
+//
+// The values reported by the wrapped functions are passed synchronously to the
+// gather callback. At most one goroutine will be active in the callback at any
+// time.
 type Gatherer[T any] struct {
 	run func(Task) // start the task in a goroutine
 
