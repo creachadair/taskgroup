@@ -1,6 +1,6 @@
 module github.com/creachadair/taskgroup
 
-go 1.24
+go 1.25
 
 require (
 	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
