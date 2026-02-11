@@ -27,7 +27,7 @@ func busyWork(n int, err error) taskgroup.Task {
 
 func TestBasic(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		t.Logf("Group value is %d bytes", reflect.TypeOf((*taskgroup.Group)(nil)).Elem().Size())
+		t.Logf("Group value is %d bytes", reflect.TypeFor[taskgroup.Group]().Size())
 
 		// Verify that the group works at all.
 		var g taskgroup.Group

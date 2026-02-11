@@ -155,9 +155,9 @@ func (ef errorFunc) filter(err error) error {
 }
 
 var (
-	triggerType = reflect.TypeOf(func() {})
-	listenType  = reflect.TypeOf(func(error) {})
-	filterType  = reflect.TypeOf(func(error) error { return nil })
+	triggerType = reflect.TypeFor[func()]()
+	listenType  = reflect.TypeFor[func(error)]()
+	filterType  = reflect.TypeFor[func(error) error]()
 )
 
 func adaptErrorFunc(ef any) errorFunc {
