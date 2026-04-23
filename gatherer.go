@@ -1,6 +1,9 @@
 package taskgroup
 
-import "sync"
+import (
+	"iter"
+	"sync"
+)
 
 // A Gatherer manages a group of [Task] functions that report values, and
 // gathers the values they return.
@@ -14,6 +17,7 @@ import "sync"
 //   - Use [Gatherer.Call] to collect the value from a func() (T, error)
 //   - Use [Gatherer.Run] to collect the value from a func() T
 //   - Use [Gatherer.Report] to collect values using a callback
+//   - Use [Gatherer.Range] to collect values from an iterator
 //
 // The values reported by the wrapped functions are passed synchronously to the
 // gather callback. At most one goroutine will be active in the callback at any
@@ -71,4 +75,20 @@ func (g *Gatherer[T]) Run(f func() T) {
 // returns are still gathered, even if f reports an error.
 func (g *Gatherer[T]) Report(f func(report func(T)) error) {
 	g.run(func() error { return f(g.report) })
+}
+
+// Range starts a task in g that runs the provided iterator until it ends or
+// until a non-nil error is reported. The value of each non-error tuple is
+// gathered. The task reports nil if it completes without reporting an error;
+// otherwise it reports the error that terminated the range.
+func (g *Gatherer[T]) Range(it iter.Seq2[T, error]) {
+	g.run(func() error {
+		for v, err := range it {
+			if err != nil {
+				return err
+			}
+			g.report(v)
+		}
+		return nil
+	})
 }
