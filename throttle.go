@@ -3,6 +3,10 @@ package taskgroup
 // A Throttle rate-limits the number of concurrent goroutines that can execute
 // in parallel to some fixed number.  A zero Throttle is ready for use, but
 // imposes no limit on parallel execution.
+//
+// Note that the [Group.Limit] method creates a throttle automatically.
+// The main reason to create a Throttle explicitly is if you want to share
+// capacity across multiple [Group] values.
 type Throttle struct {
 	adm chan struct{}
 }
