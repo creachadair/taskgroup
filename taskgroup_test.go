@@ -3,7 +3,6 @@ package taskgroup_test
 import (
 	"context"
 	"errors"
-	"iter"
 	"math"
 	"math/rand/v2"
 	"reflect"
@@ -374,42 +373,6 @@ func TestGatherer(t *testing.T) {
 			checkWait(t)
 			if sum != math.MaxUint32 {
 				t.Errorf("Final result: got %d, want %d", sum, math.MaxUint32)
-			}
-		})
-	})
-
-	t.Run("Range", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			errBadLuck := errors.New("bad luck")
-			seq := func(n int) iter.Seq2[int, error] {
-				return func(yield func(int, error) bool) {
-					for cur := range n {
-						if cur+1 == 13 {
-							yield(0, errBadLuck)
-							return
-						} else if !yield(cur+1, nil) {
-							return
-						}
-					}
-				}
-			}
-
-			var last int
-			r := taskgroup.Gather(g.Go, func(z int) { last = z })
-
-			r.Range(seq(5))
-			checkWait(t)
-			if last != 5 {
-				t.Errorf("Range(5): got %v, want 5", last)
-			}
-
-			// On error, the iteration stops at the last value prior to the error.
-			r.Range(seq(200))
-			if err := g.Wait(); err != errBadLuck {
-				t.Errorf("Range(200): err=%v, want %v", err, errBadLuck)
-			}
-			if last != 12 {
-				t.Errorf("Range(200): got %v, want 12", last)
 			}
 		})
 	})

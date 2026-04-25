@@ -334,9 +334,6 @@ in `g` that yield values, and deliver those values to the accumulator:
   returns only an `error`, but it may call its argument any number of times to
   gather values.
 
-- `c.Range` takes an `iter.Seq2[T, error]` and runs the iterator as a task and
-  gathers the value of each non-error tuple the iterator yields.
-
 Calls to the callback are serialized so that it is safe to access state without
 additional locking:
 
