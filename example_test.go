@@ -127,7 +127,7 @@ func ExampleSingle() {
 	// 2500 bytes and each read takes 50ms.
 	sr := &slowReader{2500, 50 * time.Millisecond}
 
-	// Start a task to read te "file" in the background.
+	// Start a task to read the "file" in the background.
 	fmt.Println("start")
 	s := taskgroup.Call(func() ([]byte, error) {
 		return io.ReadAll(sr)

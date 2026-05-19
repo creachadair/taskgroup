@@ -229,6 +229,21 @@ func TestSingleTask(t *testing.T) {
 		})
 	})
 
+	t.Run("Done", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			const testValue = "all is well, remain calm"
+			s := taskgroup.Go(func() string {
+				time.Sleep(10 * time.Second)
+				return testValue
+			})
+
+			<-s.Done()
+			if got := s.Wait(); got != testValue {
+				t.Errorf("Got %q, want %q", got, testValue)
+			}
+		})
+	})
+
 	t.Run("MultipleWaiters", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			// Here we want to verify that multiple concurrent waiters do not produce

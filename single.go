@@ -5,11 +5,13 @@ package taskgroup
 // until it has exited.
 type Single[T any] struct {
 	valc chan T
+	done chan struct{}
 	val  T
 }
 
 // Wait blocks until the task monitored by s has completed and returns the
-// value it reported.
+// value it reported. It is safe to call Wait from concurrent goroutines.
+// All callers will receive the same result.
 func (s *Single[T]) Wait() T {
 	if v, ok := <-s.valc; ok {
 		// This is the first call to receive a value:
@@ -20,14 +22,18 @@ func (s *Single[T]) Wait() T {
 	return s.val
 }
 
+// Done returns a channel that is closed when the task monitored by s has
+// completed. After this channel is closed, calls to Wait will not block.
+func (s *Single[T]) Done() <-chan struct{} { return s.done }
+
 // Go runs task in a new goroutine. The caller must call Wait to wait for the
 // task to return and collect its value.
 func Go[T any](task func() T) *Single[T] {
-	// N.B. This is closed by Wait.
-	valc := make(chan T, 1)
-	go func() { valc <- task() }()
+	valc := make(chan T, 1) // N.B. This is closed by Wait.
+	done := make(chan struct{})
+	go func() { defer close(done); valc <- task() }()
 
-	return &Single[T]{valc: valc}
+	return &Single[T]{valc: valc, done: done}
 }
 
 // Run runs task in a new goroutine. The caller must call Wait to wait for the
